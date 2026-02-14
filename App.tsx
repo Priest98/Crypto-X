@@ -2,6 +2,7 @@
 import React from 'react';
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import { StoreProvider } from './context/StoreContext';
+import ScrollToTop from './components/ScrollToTop';
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import Products from './pages/Products';
@@ -10,10 +11,12 @@ import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 import Orders from './pages/Orders';
 import Admin from './pages/Admin';
+import Whitepaper from './pages/Whitepaper';
 
 const App: React.FC = () => {
   return (
     <Router>
+      <ScrollToTop />
       <StoreProvider>
         <Layout>
           <Routes>
@@ -24,6 +27,7 @@ const App: React.FC = () => {
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/orders" element={<Orders />} />
             <Route path="/admin" element={<Admin />} />
+            <Route path="/whitepaper" element={<Whitepaper />} />
           </Routes>
         </Layout>
       </StoreProvider>

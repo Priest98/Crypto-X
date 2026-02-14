@@ -4,18 +4,21 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useStore } from '../context/StoreContext';
 import { Loader2, CheckCircle2, Copy, ExternalLink, QrCode, ArrowLeft, Shield, Zap, Search } from 'lucide-react';
 import { OrderStatus } from '../types';
+import { NETWORK_CONFIG } from '../constants';
 
 const Checkout: React.FC = () => {
-  const { cart, wallet, clearCart, createOrder } = useStore();
+  const { cart, wallet, clearCart, createOrder, btcPrice, network } = useStore();
   const navigate = useNavigate();
 
   const [step, setStep] = useState<'invoice' | 'verifying' | 'success'>('invoice');
   const [invoiceId] = useState(() => `TX-${Math.random().toString(36).substr(2, 6).toUpperCase()}`);
-  const [btcAddress] = useState('bc1q8c8v4v6y28p8v28v28v28v28v28v28v28v28'); // Store Master Address
+
+  const btcAddress = NETWORK_CONFIG[network]?.storeAddress || NETWORK_CONFIG['testnet'].storeAddress;
+
   const [manualTxId, setManualTxId] = useState('');
   const [verificationError, setVerificationError] = useState<string | null>(null);
   const [confirmedTxId, setConfirmedTxId] = useState<string | null>(null);
-  
+
   const subtotal = cart.reduce((acc, item) => acc + (item.price_btc * item.quantity), 0);
   const total = subtotal + 0.00005;
 
@@ -40,20 +43,21 @@ const Checkout: React.FC = () => {
     setVerificationError(null);
 
     try {
-      // Real Bitcoin API call to mempool.space
-      const response = await fetch(`https://mempool.space/api/tx/${txidToVerify}`);
-      
+      // Dynamic Bitcoin API call based on network
+      const apiBase = NETWORK_CONFIG[network]?.mempoolApi || NETWORK_CONFIG['testnet'].mempoolApi;
+      const response = await fetch(`${apiBase}/tx/${txidToVerify}`);
+
       if (!response.ok) {
         throw new Error('Transaction not found on-chain yet');
       }
 
       const txData = await response.json();
-      
+
       // In a production environment, we would strictly verify:
       // 1. txData.vout contains an output to our btcAddress
       // 2. txData.vout[i].value matches our required total
       // 3. txData.status.confirmed is true (or check confirmation count)
-      
+
       // For this demo/native flow, we assume detection = intent to settle
       setTimeout(() => {
         completeSettlement(txidToVerify);
@@ -83,8 +87,13 @@ const Checkout: React.FC = () => {
 
   // Simulation for users without a real TX yet
   const simulatePayment = () => {
-    const fakeTxId = 'bc' + Array.from({length: 62}, () => Math.floor(Math.random() * 16).toString(16)).join('');
-    handleVerifyOnChain(fakeTxId);
+    const fakeTxId = 'bc' + Array.from({ length: 62 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+    // Bypass real chain verification for simulation
+    setStep('verifying');
+    setVerificationError(null);
+    setTimeout(() => {
+      completeSettlement(fakeTxId);
+    }, 2000);
   };
 
   if (step === 'success') {
@@ -97,7 +106,7 @@ const Checkout: React.FC = () => {
         <p className="text-gray-500 text-xl mb-16 max-w-lg mx-auto font-medium leading-relaxed">
           Order <span className="text-white font-mono">#{invoiceId}</span> has been authenticated on-chain. Your boutique assets are now being prepared for discrete dispatch.
         </p>
-        
+
         <div className="glass-ios p-6 rounded-3xl mb-12 max-w-md mx-auto">
           <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 block mb-2">Transaction Proof</span>
           <code className="text-primary text-xs break-all font-mono">{confirmedTxId}</code>
@@ -138,20 +147,21 @@ const Checkout: React.FC = () => {
               <span className="text-gray-600 font-black text-[10px] uppercase tracking-widest">Digital Invoice</span>
               <span className="font-mono text-sm text-primary">{invoiceId}</span>
             </div>
-            
+
             <div className="text-center py-12 glass-ios rounded-[40px] bg-white/[0.01]">
               <span className="text-gray-600 text-[10px] font-black uppercase tracking-[0.3em] block mb-4">Settlement Amount</span>
               <div className="flex items-center justify-center space-x-3 text-primary">
                 <span className="text-4xl font-black italic">₿</span>
                 <span className="text-7xl font-black tracking-tighter">{total.toFixed(8)}</span>
               </div>
+              <span className="text-xl font-bold text-gray-500 mt-2 block">≈ ${(total * btcPrice).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
 
             <div className="space-y-6">
               <label className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-600">Store Bitcoin Address</label>
               <div className="flex items-center glass-ios rounded-[28px] p-4 group">
                 <code className="flex-grow text-xs truncate mr-4 font-mono text-white/70">{btcAddress}</code>
-                <button 
+                <button
                   onClick={() => copyToClipboard(btcAddress)}
                   className="p-4 bg-white/5 hover:bg-primary hover:text-black rounded-2xl transition-all"
                 >
@@ -163,20 +173,20 @@ const Checkout: React.FC = () => {
             <div className="flex items-center justify-center py-6">
               <div className="bg-white p-8 rounded-[48px] shadow-[0_0_80px_rgba(255,255,255,0.1)] group hover:scale-105 transition-transform duration-1000">
                 <div className="w-56 h-56 bg-black flex items-center justify-center relative rounded-[32px] overflow-hidden">
-                   <QrCode size={180} className="text-white" />
-                   <div className="absolute inset-0 flex items-center justify-center opacity-5">
+                  <QrCode size={180} className="text-white" />
+                  <div className="absolute inset-0 flex items-center justify-center opacity-5">
                     <span className="text-white font-black text-6xl italic">₿</span>
-                   </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
           <div className="flex items-start space-x-6 px-10">
-             <Shield className="text-primary shrink-0 mt-1" size={28} />
-             <p className="text-xs text-gray-500 font-medium leading-relaxed uppercase tracking-widest">
-               Secure Peer-to-Peer settlement. This invoice will expire in <span className="text-white">15:00</span>. Authenticate via your {wallet?.type} wallet or external node.
-             </p>
+            <Shield className="text-primary shrink-0 mt-1" size={28} />
+            <p className="text-xs text-gray-500 font-medium leading-relaxed uppercase tracking-widest">
+              Secure Peer-to-Peer settlement. This invoice will expire in <span className="text-white">15:00</span>. Authenticate via your {wallet?.type} wallet or external node.
+            </p>
           </div>
         </div>
 
@@ -191,22 +201,22 @@ const Checkout: React.FC = () => {
                 <h2 className="text-5xl font-black mb-6 tracking-tight">Awaiting Proof</h2>
                 <p className="text-gray-500 text-lg leading-relaxed">Once you broadcast your transaction, enter the TXID below or use your connected wallet to sign and settle.</p>
               </div>
-              
+
               <div className="space-y-8">
                 <div className="relative group">
                   <label className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-600 block mb-4">Transaction Hash (TXID)</label>
                   <div className="flex items-center space-x-4">
                     <div className="relative flex-grow">
                       <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-primary transition-colors" size={18} />
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         value={manualTxId}
                         onChange={(e) => setManualTxId(e.target.value)}
-                        placeholder="Paste TXID from wallet..." 
+                        placeholder="Paste TXID from wallet..."
                         className="w-full glass-ios pl-16 pr-8 py-5 rounded-[24px] focus:outline-none focus:border-primary/50 text-xs font-mono transition-all"
                       />
                     </div>
-                    <button 
+                    <button
                       onClick={() => handleVerifyOnChain(manualTxId)}
                       className="p-5 bg-white text-black rounded-2xl font-black hover:bg-primary transition-all active:scale-90"
                     >
@@ -215,8 +225,8 @@ const Checkout: React.FC = () => {
                   </div>
                   {verificationError && (
                     <p className="mt-4 text-xs font-bold text-red-500 flex items-center space-x-2">
-                       <span>⚠️</span>
-                       <span>{verificationError}</span>
+                      <span>⚠️</span>
+                      <span>{verificationError}</span>
                     </p>
                   )}
                 </div>
@@ -226,43 +236,46 @@ const Checkout: React.FC = () => {
                   <span className="flex-shrink mx-4 text-[10px] font-black text-gray-600 uppercase tracking-widest">Or Secure Pay</span>
                   <div className="flex-grow border-t border-white/5"></div>
                 </div>
-                
-                <button 
+
+                <button
                   onClick={simulatePayment}
                   className="w-full bg-white text-black py-8 rounded-[32px] font-black text-2xl flex items-center justify-center space-x-4 transition-all hover:bg-primary shadow-2xl hover:scale-105 active:scale-95"
                 >
                   <span>Pay with {wallet?.type}</span>
                   <ExternalLink size={24} />
                 </button>
-                
+
                 <p className="text-[10px] text-gray-600 font-black uppercase tracking-widest text-center">Zero-confirmation detection active</p>
               </div>
             </div>
           ) : (
             <div className="space-y-16 py-20 w-full max-w-md">
-               <div className="relative w-48 h-48 mx-auto">
-                 <div className="absolute inset-0 border-[6px] border-primary/10 border-t-primary rounded-full animate-spin"></div>
-                 <div className="absolute inset-8 glass-ios rounded-full flex items-center justify-center shadow-inner">
-                    <span className="text-5xl font-black text-primary italic">₿</span>
-                 </div>
-               </div>
-               <div className="space-y-6">
-                 <h2 className="text-4xl font-black tracking-tight">Verifying Evidence</h2>
-                 <p className="text-gray-500 text-lg leading-relaxed">Proof of payment detected in mempool. Authenticating on-chain details for settlement.</p>
-               </div>
+              <div className="relative w-48 h-48 mx-auto">
+                <div className="absolute inset-0 border-[6px] border-primary/10 border-t-primary rounded-full animate-spin"></div>
+                <div className="absolute inset-8 glass-ios rounded-full flex items-center justify-center shadow-inner">
+                  <span className="text-5xl font-black text-primary italic">₿</span>
+                </div>
+              </div>
+              <div className="space-y-6">
+                <h2 className="text-4xl font-black tracking-tight">Verifying Evidence</h2>
+                <p className="text-gray-500 text-lg leading-relaxed">Proof of payment detected in mempool. Authenticating on-chain details for settlement.</p>
+              </div>
             </div>
           )}
 
           <div className="w-full glass-ios rounded-[40px] p-10 text-left border border-white/5">
-             <h4 className="font-black text-[10px] uppercase tracking-[0.4em] text-gray-600 mb-8">Asset Manifest</h4>
-             <div className="space-y-4">
-                {cart.map(item => (
-                  <div key={item.id} className="flex justify-between items-center text-sm font-bold">
-                    <span className="text-white/70">{item.name} <span className="text-[10px] opacity-40 ml-2">x{item.quantity}</span></span>
-                    <span className="text-primary font-mono">{item.price_btc * item.quantity} ₿</span>
+            <h4 className="font-black text-[10px] uppercase tracking-[0.4em] text-gray-600 mb-8">Asset Manifest</h4>
+            <div className="space-y-4">
+              {cart.map(item => (
+                <div key={item.id} className="flex justify-between items-center text-sm font-bold">
+                  <span className="text-white/70">{item.name} <span className="text-[10px] opacity-40 ml-2">x{item.quantity}</span></span>
+                  <div className="flex flex-col items-end">
+                    <span className="text-primary font-mono">{(item.price_btc * item.quantity).toFixed(8)} ₿</span>
+                    <span className="text-[10px] text-gray-500">≈ ${((item.price_btc * item.quantity) * btcPrice).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
-                ))}
-             </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>

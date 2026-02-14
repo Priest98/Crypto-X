@@ -3,6 +3,8 @@ export type WalletType = 'Xverse' | 'UniSat';
 
 export type ConnectionStatus = 'idle' | 'hover' | 'connecting' | 'connected' | 'error';
 
+export type Network = 'mainnet' | 'testnet' | 'testnet4' | 'signet' | 'regtest';
+
 export interface WalletInfo {
   address: string;
   paymentAddress?: string;

@@ -1,13 +1,18 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { Product, CartItem, Order, WalletInfo, OrderStatus } from '../types';
+import { Product, CartItem, Order, WalletInfo, OrderStatus, Network } from '../types';
 import { INITIAL_PRODUCTS } from '../constants';
+import { Toast, ToastType } from '../components/Toast';
 
 interface StoreContextType {
   products: Product[];
   cart: CartItem[];
   wallet: WalletInfo | null;
   orders: Order[];
+  toasts: Toast[];
+  btcPrice: number;
+  network: Network;
+  setNetwork: (network: Network) => void;
   addToCart: (product: Product) => void;
   removeFromCart: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
@@ -17,6 +22,8 @@ interface StoreContextType {
   createOrder: (order: Order) => void;
   updateOrderStatus: (orderId: string, status: OrderStatus, hash?: string) => void;
   setProducts: (products: Product[]) => void;
+  showToast: (message: string, type?: ToastType) => void;
+  dismissToast: (id: string) => void;
 }
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
@@ -42,6 +49,29 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return saved ? JSON.parse(saved) : [];
   });
 
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const [btcPrice, setBtcPrice] = useState<number>(0);
+  const [network, setNetwork] = useState<Network>('testnet');
+
+  useEffect(() => {
+    const fetchBtcPrice = async () => {
+      try {
+        const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd');
+        const data = await response.json();
+        setBtcPrice(data.bitcoin.usd);
+      } catch (error) {
+        console.error('Failed to fetch BTC price:', error);
+        // Fallback price if API fails
+        setBtcPrice(98000);
+      }
+    };
+
+    fetchBtcPrice();
+    // Refresh every 5 minutes
+    const interval = setInterval(fetchBtcPrice, 300000);
+    return () => clearInterval(interval);
+  }, []);
+
   useEffect(() => {
     localStorage.setItem('cryptox_products', JSON.stringify(products));
   }, [products]);
@@ -58,6 +88,15 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     localStorage.setItem('cryptox_orders', JSON.stringify(orders));
   }, [orders]);
 
+  const showToast = useCallback((message: string, type: ToastType = 'success') => {
+    const id = `toast-${Date.now()}-${Math.random()}`;
+    setToasts(prev => [...prev, { id, message, type }]);
+  }, []);
+
+  const dismissToast = useCallback((id: string) => {
+    setToasts(prev => prev.filter(toast => toast.id !== id));
+  }, []);
+
   const addToCart = useCallback((product: Product) => {
     setCart(prev => {
       const existing = prev.find(item => item.id === product.id);
@@ -66,11 +105,16 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
       return [...prev, { ...product, quantity: 1 }];
     });
-  }, []);
+    showToast(`${product.name} added to cart`, 'success');
+  }, [showToast]);
 
   const removeFromCart = useCallback((productId: string) => {
+    const item = cart.find(i => i.id === productId);
     setCart(prev => prev.filter(item => item.id !== productId));
-  }, []);
+    if (item) {
+      showToast(`${item.name} removed from cart`, 'info');
+    }
+  }, [cart, showToast]);
 
   const updateQuantity = useCallback((productId: string, quantity: number) => {
     if (quantity <= 0) {
@@ -90,7 +134,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   const updateOrderStatus = useCallback((orderId: string, status: OrderStatus, hash?: string) => {
-    setOrders(prev => prev.map(order => 
+    setOrders(prev => prev.map(order =>
       order.id === orderId ? { ...order, status, transaction_hash: hash || order.transaction_hash } : order
     ));
   }, []);
@@ -101,10 +145,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   return (
     <StoreContext.Provider value={{
-      products, cart, wallet, orders,
+      products, cart, wallet, orders, toasts, btcPrice, network, setNetwork,
       addToCart, removeFromCart, updateQuantity, clearCart,
       connectWallet, disconnectWallet, createOrder, updateOrderStatus,
-      setProducts
+      setProducts, showToast, dismissToast
     }}>
       {children}
     </StoreContext.Provider>
