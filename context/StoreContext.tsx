@@ -51,7 +51,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [btcPrice, setBtcPrice] = useState<number>(0);
-  const [network, setNetwork] = useState<Network>('testnet');
+  const [network, setNetwork] = useState<Network>('testnet4');
 
   useEffect(() => {
     const fetchBtcPrice = async () => {

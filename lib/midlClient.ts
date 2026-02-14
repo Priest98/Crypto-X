@@ -72,9 +72,9 @@ export class MidlClient {
         switch (network) {
             case 'mainnet': return BitcoinNetworkType.Mainnet;
             case 'testnet': return BitcoinNetworkType.Testnet;
-            case 'testnet4': return BitcoinNetworkType.Testnet; // Xverse often treats testnet4 as Testnet
-            case 'signet': return BitcoinNetworkType.Testnet; // Often mapped to Testnet in simple implementations, or 'Signet' if supported
-            case 'regtest': return BitcoinNetworkType.Testnet; // Keeping simple for now
+            case 'testnet4': return BitcoinNetworkType.Testnet4;
+            case 'signet': return BitcoinNetworkType.Signet;
+            case 'regtest': return BitcoinNetworkType.Regtest;
             default: return BitcoinNetworkType.Testnet;
         }
     }

@@ -40,6 +40,7 @@ const WalletModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpe
       let msg = 'Connection failed. Please try again.';
       if (e.message.includes('not installed')) msg = `${type} wallet is not installed.`;
       else if (e.message === 'USER_CANCELLED') msg = 'Connection was cancelled.';
+      else if (e.message.includes('Mismatched Network')) msg = `Network Mismatch: Please switch your wallet to ${network} or change the app network.`;
       else msg = e.message || msg;
       setErrorMessage(msg);
     }
