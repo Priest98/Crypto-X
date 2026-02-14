@@ -30,7 +30,8 @@ export const connectWallet = async (type: 'Xverse' | 'UniSat', network: Network)
 export const executeBitcoinPayment = async (
   amount: number,
   recipient: string,
-  network: Network
+  network: Network,
+  walletType?: 'Xverse' | 'UniSat'
 ): Promise<string> => {
   if (!isMidlReady()) {
     throw new Error('MIDL SDK not initialized');
@@ -40,19 +41,13 @@ export const executeBitcoinPayment = async (
     console.log('Preparing Midl Transaction...');
 
     // 1. Prepare Transaction via Midl
-    const txTemplate = await midlClient.prepareTransaction({
-      recipient,
-      amount,
-      network
-    });
+    // passing walletType to ensure robustness across reloads
+    const txid = await midlClient.executeBitcoinPayment(amount, recipient, network, walletType);
 
-    // 2. Request Wallet Signature
-    console.log('Requesting Signature...');
-    const signedTx = await midlClient.signTransaction(txTemplate);
+    return txid;
 
-    // 3. Broadcast via Midl
-    console.log('Broadcasting via Midl...');
-    const txid = await midlClient.broadcastTransaction(signedTx);
+    // 2. Request Wallet Signature & Broadcast handled by unified executeBitcoinPayment
+    console.log('Transaction executed via Midl:', txid);
 
     return txid;
   } catch (error: any) {

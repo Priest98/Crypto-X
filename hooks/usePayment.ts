@@ -35,7 +35,8 @@ export const usePayment = () => {
 
         try {
             // 1. Execute Payment via Midl
-            const tx = await executeBitcoinPayment(amountSats, toAddress, network);
+            const walletType = wallet?.type as 'Xverse' | 'UniSat' | undefined;
+            const tx = await executeBitcoinPayment(amountSats, toAddress, network, walletType);
             console.log('Midl TX ID:', tx);
 
             if (tx) {

@@ -40,7 +40,12 @@ export class MidlClient {
         throw new Error('Unsupported wallet provider');
     }
 
-    async executeBitcoinPayment(amountSats: number, recipient: string, network: MidlConfig['network']): Promise<string> {
+    async executeBitcoinPayment(amountSats: number, recipient: string, network: MidlConfig['network'], walletType?: 'Xverse' | 'UniSat'): Promise<string> {
+        // Allow overriding or setting the connected wallet type (e.g. from persisted state)
+        if (walletType) {
+            this.connectedWallet = walletType;
+        }
+
         if (!this.connectedWallet) {
             // Try to auto-detect if already connected via window (fallback)
             if (typeof (window as any).unisat !== 'undefined') {
@@ -56,6 +61,8 @@ export class MidlClient {
         if (!this.connectedWallet) {
             throw new Error("No wallet connected. Please connect a wallet first.");
         }
+
+        console.log(`[Midl] Executing payment via ${this.connectedWallet} on ${network}`);
 
         if (this.connectedWallet === 'Xverse') {
             return this.sendXverseTransaction(amountSats, recipient, network);
