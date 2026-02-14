@@ -5,7 +5,8 @@ import paymentRoutes from './routes/payments';
 
 dotenv.config();
 
-const app = express();
+// Export app for Vercel
+export const app = express();
 const port = process.env.PORT || 3001;
 
 app.use(cors({
@@ -21,6 +22,9 @@ app.get('/', (req, res) => {
     res.send('VELENCIA Backend Running');
 });
 
-app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
-});
+// Conditionally start server if not in Vercel environment
+if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+    app.listen(port, () => {
+        console.log(`Server is running on port ${port}`);
+    });
+}

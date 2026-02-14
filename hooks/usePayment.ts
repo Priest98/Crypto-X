@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { connectXverse, connectUniSat, sendTransaction } from '../services/walletService';
+import { connectWallet, executeBitcoinPayment } from '../services/walletService';
 import { WalletInfo } from '../types';
 import { useStore } from '../context/StoreContext';
 
@@ -14,25 +14,15 @@ export const usePayment = () => {
 
     const connect = async (type: 'Xverse' | 'UniSat') => {
         setError(null);
-        let res = null;
         try {
-            if (type === 'Xverse') res = await connectXverse(network);
-            else if (type === 'UniSat') res = await connectUniSat(network);
-
+            const res = await connectWallet(type, network);
             if (res) {
                 setWallet(res);
             }
         } catch (err: any) {
             console.error(err);
-            if (err.message === "XVERSE_NOT_INSTALLED") {
-                setError("Xverse not detected. Please install it.");
-            } else if (err.message === "UNISAT_NOT_INSTALLED") {
-                setError("UniSat not detected. Please install it.");
-            } else if (err.message === "USER_CANCELLED") {
-                setError("Connection cancelled.");
-            } else {
-                setError("Failed to connect wallet.");
-            }
+            // Midl SDK should throw meaningful errors
+            setError(err.message || "Failed to connect wallet via Midl.");
         }
     };
 
@@ -41,15 +31,31 @@ export const usePayment = () => {
 
         setIsProcessing(true);
         setVerificationStatus('pending');
-        setError(null); // Clear previous errors
+        setError(null);
 
         try {
-            const tx = await sendTransaction(wallet.type, toAddress, amountSats, network);
-            console.log('TX Response:', tx);
+            // 1. Execute Payment via Midl
+            const tx = await executeBitcoinPayment(amountSats, toAddress, network);
+            console.log('Midl TX ID:', tx);
+
             if (tx) {
                 setTxId(tx);
-                // Start polling for verification
-                verifyTransaction(tx, orderId, toAddress, amountSats);
+
+                // 2. Store Payment Intent on Backend
+                await fetch('http://localhost:3001/api/payments/store', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        walletAddress: wallet.address,
+                        amount: amountSats,
+                        txid: tx,
+                        orderId,
+                        network
+                    }),
+                });
+
+                // 3. Start Verification Loop
+                verifyTransaction(tx);
             } else {
                 setVerificationStatus('failed');
                 setIsProcessing(false);
@@ -63,16 +69,13 @@ export const usePayment = () => {
         }
     };
 
-    const verifyTransaction = async (tx: string, orderId: string, address: string, amount: number) => {
+    const verifyTransaction = async (tx: string) => {
         const poll = setInterval(async () => {
             try {
-                const response = await fetch('http://localhost:3001/api/payments/verify', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ txid: tx, orderId, address, amount, network }),
-                });
-
+                // Poll the new verify endpoint
+                const response = await fetch(`http://localhost:3001/api/payments/verify/${tx}`);
                 const data = await response.json();
+
                 if (data.status) {
                     setConfirmations(data.confirmations || 0);
                     if (data.status === 'confirmed') {
@@ -83,15 +86,13 @@ export const usePayment = () => {
                 }
             } catch (error) {
                 console.error('Verification polling error', error);
-                // Optionally set an error here if polling consistently fails
             }
         }, 5000); // Poll every 5 seconds
 
-        // Stop polling after 10 minutes to avoid infinite loops in demo
+        // Timeout after 10 minutes
         setTimeout(() => {
             clearInterval(poll);
             if (verificationStatus !== 'confirmed') {
-                // Optional: Handle timeout
                 // setError("Transaction verification timed out.");
                 // setIsProcessing(false);
             }

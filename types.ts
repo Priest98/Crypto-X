@@ -10,6 +10,7 @@ export interface WalletInfo {
   paymentAddress?: string;
   ordinalsAddress?: string;
   type: WalletType;
+  publicKey?: string;
 }
 
 export interface Product {

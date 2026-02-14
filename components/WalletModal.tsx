@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../context/StoreContext';
-import { connectXverse, connectUniSat } from '../services/walletService';
-import { X, CheckCircle2, AlertCircle, Copy, ExternalLink, ArrowRight, Wallet, ChevronRight } from 'lucide-react';
+import { connectWallet } from '../services/walletService';
+import { X, CheckCircle2, AlertCircle, ExternalLink, Shield, Zap, ArrowRight } from 'lucide-react';
 import { ConnectionStatus } from '../types';
 
 const WalletModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
-  const { connectWallet, network } = useStore();
+  const { connectWallet: setStoreWallet, network } = useStore();
   const [status, setStatus] = useState<ConnectionStatus>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [connectedAddress, setConnectedAddress] = useState<string | null>(null);
@@ -26,61 +26,26 @@ const WalletModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpe
     setStatus('connecting');
     setErrorMessage(null);
     try {
-      const walletInfo = type === 'Xverse' ? await connectXverse(network) : await connectUniSat(network);
+      // Use unified Midl connectWallet function
+      const walletInfo = await connectWallet(type, network);
       setConnectedAddress(walletInfo.address);
       setStatus('connected');
 
       setTimeout(() => {
-        connectWallet(walletInfo);
+        setStoreWallet(walletInfo);
         onClose();
       }, 1500);
     } catch (e: any) {
       setStatus('error');
       let msg = 'Connection failed. Please try again.';
-      if (e.message === 'XVERSE_NOT_INSTALLED') msg = 'Xverse wallet is not installed.';
-      else if (e.message === 'UNISAT_NOT_INSTALLED') msg = 'UniSat wallet is not installed.';
+      if (e.message.includes('not installed')) msg = `${type} wallet is not installed.`;
       else if (e.message === 'USER_CANCELLED') msg = 'Connection was cancelled.';
+      else msg = e.message || msg;
       setErrorMessage(msg);
     }
   };
 
   if (!isOpen) return null;
-
-  const walletOptions = [
-    {
-      id: 'Xverse',
-      name: 'Xverse',
-      type: 'Xverse' as const,
-      description: 'The premier wallet for Bitcoin & Stacks.',
-      icon: (
-        <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-500">
-          <span className="font-bold text-lg">X</span>
-        </div>
-      )
-    },
-    {
-      id: 'Ordinals',
-      name: 'Ordinals',
-      type: 'Xverse' as const, // Uses Xverse backend
-      description: 'Store and managing digital artifacts.',
-      icon: (
-        <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-500">
-          <span className="font-bold text-lg">O</span>
-        </div>
-      )
-    },
-    {
-      id: 'UniSat',
-      name: 'UniSat',
-      type: 'UniSat' as const,
-      description: 'Inscriptions and BRC-20 tokens.',
-      icon: (
-        <div className="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center text-yellow-500">
-          <span className="font-bold text-lg">U</span>
-        </div>
-      )
-    }
-  ];
 
   return (
     <AnimatePresence>
@@ -88,86 +53,111 @@ const WalletModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpe
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-md p-4"
+        className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-xl p-4"
         onClick={onClose}
       >
         <motion.div
           initial={{ scale: 0.95, opacity: 0, y: 20 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.95, opacity: 0, y: 20 }}
-          style={{ boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }} // Hard shadow for depth
-          className="w-full max-w-md bg-[#09090b] border border-white/10 rounded-3xl overflow-hidden relative"
+          className="w-full max-w-2xl relative"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Header */}
-          <div className="px-6 py-5 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
-            <h2 className="text-xl font-bold text-white tracking-tight">Connect Wallet</h2>
-            <button
-              onClick={onClose}
-              className="p-2 rounded-full hover:bg-white/10 text-white/50 hover:text-white transition-colors"
-            >
-              <X size={20} />
-            </button>
-          </div>
+          <button
+            onClick={onClose}
+            className="absolute -top-12 right-0 p-2 rounded-full bg-white/5 hover:bg-white/10 text-white/50 hover:text-white transition-colors"
+          >
+            <X size={24} />
+          </button>
 
-          {/* Content */}
-          <div className="p-6">
-            {status === 'error' && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 flex items-start space-x-3"
-              >
-                <AlertCircle className="text-red-500 shrink-0 mt-0.5" size={18} />
-                <div className="flex-1">
-                  <h4 className="text-sm font-bold text-red-500">Connection Error</h4>
-                  <p className="text-xs text-red-400 mt-1">{errorMessage}</p>
+          <div className="text-center">
+            {/* Header Icon */}
+            <div className="w-24 h-24 mx-auto mb-12 relative group cursor-pointer">
+              <div className="absolute inset-0 bg-primary/20 rounded-[32px] blur-xl group-hover:blur-2xl transition-all duration-500"></div>
+              <div className="relative w-full h-full bg-[#09090b] border border-white/10 rounded-[32px] flex items-center justify-center shadow-2xl overflow-hidden group-hover:scale-105 transition-transform duration-500">
+                <div className="flex space-x-2 mb-2">
+                  <div className="w-3 h-8 bg-primary rounded-full shadow-[0_0_15px_rgba(34,197,94,0.6)] animate-pulse"></div>
+                  <div className="w-3 h-8 bg-primary rounded-full shadow-[0_0_15px_rgba(34,197,94,0.6)] animate-pulse delay-75"></div>
                 </div>
-              </motion.div>
-            )}
+                <div className="absolute bottom-4 text-white/20 text-xl font-serif italic">₿</div>
+              </div>
+            </div>
 
             {status === 'connected' ? (
-              <div className="flex flex-col items-center justify-center py-8 space-y-4">
-                <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mb-2">
-                  <CheckCircle2 size={32} className="text-green-500" />
+              <div className="py-12 animate-in fade-in zoom-in duration-500">
+                <div className="w-20 h-20 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-6 border border-green-500/20">
+                  <CheckCircle2 size={40} className="text-green-500" />
                 </div>
-                <h3 className="text-lg font-bold text-white">Wallet Connected</h3>
-                <p className="text-sm text-gray-400 font-mono bg-black/50 px-3 py-1.5 rounded-lg border border-white/5">
+                <h2 className="text-4xl font-black text-white mb-4 tracking-tight">Identity Verified</h2>
+                <p className="text-gray-400 font-mono bg-black/50 px-6 py-3 rounded-xl border border-white/10 inline-block text-lg">
                   {connectedAddress?.slice(0, 8)}...{connectedAddress?.slice(-8)}
                 </p>
               </div>
             ) : (
-              <div className="space-y-3">
-                {walletOptions.map((option) => (
-                  <button
-                    key={option.id}
-                    onClick={() => handleConnect(option.type)}
-                    disabled={status === 'connecting'}
-                    className="w-full group flex items-center p-4 rounded-2xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-left relative overflow-hidden"
-                  >
-                    <div className="mr-4 shrink-0 relative z-10">{option.icon}</div>
-                    <div className="flex-1 relative z-10">
-                      <h3 className="text-base font-bold text-white group-hover:text-primary transition-colors">{option.name}</h3>
-                      <p className="text-xs text-gray-500">{option.description}</p>
-                    </div>
-                    <div className="text-white/10 group-hover:text-white/50 group-hover:translate-x-1 transition-all relative z-10">
-                      <ChevronRight size={20} />
-                    </div>
+              <div className="space-y-12">
+                <div>
+                  <h2 className="text-5xl md:text-6xl font-black text-white italic tracking-tighter mb-6">WELCOME TO ATELIER</h2>
+                  <p className="text-xl text-gray-400 font-medium max-w-lg mx-auto leading-relaxed">
+                    Your gateway to premium Bitcoin-native craftsmanship. Choose your prover.
+                  </p>
+                </div>
 
+                {/* Error Message */}
+                {status === 'error' && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-red-500/10 border border-red-500/20 text-red-500 px-6 py-4 rounded-xl inline-flex items-center space-x-3"
+                  >
+                    <AlertCircle size={20} />
+                    <span className="font-bold">{errorMessage}</span>
+                  </motion.div>
+                )}
+
+                <div className="flex flex-col items-center space-y-6 max-w-md mx-auto">
+                  {/* Primary Action */}
+                  <button
+                    onClick={() => handleConnect('Xverse')}
+                    disabled={status === 'connecting'}
+                    className="w-full bg-white hover:bg-white/90 text-black h-20 rounded-[24px] font-black text-2xl flex items-center justify-center space-x-4 transition-all hover:scale-[1.02] active:scale-95 shadow-[0_0_40px_rgba(255,255,255,0.1)] group relative overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <span className="relative z-10">Connect Xverse</span>
+                    <ArrowRight className="relative z-10 transition-transform group-hover:translate-x-2" size={28} />
                     {status === 'connecting' && (
-                      <div className="absolute inset-0 bg-white/5 animate-pulse" />
+                      <div className="absolute inset-0 bg-white/50 animate-pulse z-20"></div>
                     )}
                   </button>
-                ))}
+
+                  {/* Secondary Actions */}
+                  <div className="grid grid-cols-2 gap-4 w-full">
+                    <button
+                      onClick={() => handleConnect('UniSat')}
+                      disabled={status === 'connecting'}
+                      className="h-16 rounded-[20px] glass-ios border border-white/10 hover:bg-white/5 text-gray-400 hover:text-white font-bold uppercase tracking-widest text-xs flex items-center justify-center space-x-3 transition-all hover:border-primary/50 group"
+                    >
+                      <Shield size={16} className="group-hover:text-primary transition-colors" />
+                      <span>Unisat</span>
+                    </button>
+
+                    <a
+                      href="https://www.xverse.app/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="h-16 rounded-[20px] glass-ios border border-white/10 hover:bg-white/5 text-gray-400 hover:text-white font-bold uppercase tracking-widest text-xs flex items-center justify-center space-x-3 transition-all hover:border-white/30"
+                    >
+                      <ExternalLink size={16} />
+                      <span>Get Xverse</span>
+                    </a>
+                  </div>
+                </div>
+
+                <div className="pt-12 flex justify-center space-x-12 text-[10px] font-black tracking-[0.3em] text-white/20 uppercase">
+                  <span>Non-Custodial</span>
+                  <span>Direct BTC</span>
+                  <span>Peer-to-Peer</span>
+                </div>
               </div>
             )}
-          </div>
-
-          {/* Footer */}
-          <div className="px-6 py-4 bg-white/[0.02] border-t border-white/5 text-center">
-            <p className="text-xs text-gray-500">
-              New to Bitcoin? <a href="https://www.xverse.app/" target="_blank" rel="noreferrer" className="text-white hover:text-primary underline decoration-white/20 hover:decoration-primary transition-colors">Learn more about wallets</a>
-            </p>
           </div>
         </motion.div>
       </motion.div>
