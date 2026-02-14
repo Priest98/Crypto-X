@@ -5,6 +5,7 @@ import { useStore } from '../context/StoreContext';
 import { Loader2, CheckCircle2, Copy, ExternalLink, QrCode, ArrowLeft, Shield, Zap, Search } from 'lucide-react';
 import { OrderStatus } from '../types';
 import { NETWORK_CONFIG } from '../constants';
+import { executeBitcoinPayment } from '../services/walletService';
 
 const Checkout: React.FC = () => {
   const { cart, wallet, clearCart, createOrder, btcPrice, network } = useStore();
@@ -85,15 +86,34 @@ const Checkout: React.FC = () => {
     clearCart();
   };
 
-  // Simulation for users without a real TX yet
-  const simulatePayment = () => {
-    const fakeTxId = 'bc' + Array.from({ length: 62 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
-    // Bypass real chain verification for simulation
+
+
+  const handlePayment = async () => {
+    if (!wallet) return;
+
     setStep('verifying');
     setVerificationError(null);
-    setTimeout(() => {
-      completeSettlement(fakeTxId);
-    }, 2000);
+
+    try {
+      // Execute Real Payment
+      const txid = await executeBitcoinPayment(
+        Math.floor(total * 100000000), // Convert to sats
+        btcAddress,
+        network,
+        wallet.type as 'Xverse' | 'UniSat'
+      );
+
+      if (txid) {
+        // Optionally wait for mempool propagation or just settle
+        completeSettlement(txid);
+      } else {
+        throw new Error('Transaction failed');
+      }
+    } catch (error: any) {
+      console.error(error);
+      setStep('invoice');
+      setVerificationError(error.message || 'Payment failed');
+    }
   };
 
   if (step === 'success') {
@@ -103,13 +123,21 @@ const Checkout: React.FC = () => {
           <CheckCircle2 size={64} className="animate-bounce" />
         </div>
         <h1 className="text-7xl font-black mb-6 tracking-tighter">Settlement Confirmed</h1>
-        <p className="text-gray-500 text-xl mb-16 max-w-lg mx-auto font-medium leading-relaxed">
+        <p className="text-gray-500 text-xl mb-16 max-w-md mx-auto font-medium leading-relaxed">
           Order <span className="text-white font-mono">#{invoiceId}</span> has been authenticated on-chain. Your boutique assets are now being prepared for discrete dispatch.
         </p>
 
         <div className="glass-ios p-6 rounded-3xl mb-12 max-w-md mx-auto">
           <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 block mb-2">Transaction Proof</span>
-          <code className="text-primary text-xs break-all font-mono">{confirmedTxId}</code>
+          <a
+            href={`${NETWORK_CONFIG[network]?.mempoolApi.replace('/api', '')}/tx/${confirmedTxId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary text-xs break-all font-mono hover:underline flex items-center justify-center space-x-2"
+          >
+            <span>{confirmedTxId}</span>
+            <ExternalLink size={12} />
+          </a>
         </div>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
@@ -238,7 +266,7 @@ const Checkout: React.FC = () => {
                 </div>
 
                 <button
-                  onClick={simulatePayment}
+                  onClick={handlePayment}
                   className="w-full bg-white text-black py-8 rounded-[32px] font-black text-2xl flex items-center justify-center space-x-4 transition-all hover:bg-primary shadow-2xl hover:scale-105 active:scale-95"
                 >
                   <span>Pay with {wallet?.type}</span>
@@ -271,7 +299,7 @@ const Checkout: React.FC = () => {
                   <span className="text-white/70">{item.name} <span className="text-[10px] opacity-40 ml-2">x{item.quantity}</span></span>
                   <div className="flex flex-col items-end">
                     <span className="text-primary font-mono">{(item.price_btc * item.quantity).toFixed(8)} ₿</span>
-                    <span className="text-[10px] text-gray-500">≈ ${((item.price_btc * item.quantity) * btcPrice).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <span className="text-italic text-gray-500">≈ ${((item.price_btc * item.quantity) * btcPrice).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                 </div>
               ))}
@@ -282,5 +310,6 @@ const Checkout: React.FC = () => {
     </div>
   );
 };
+
 
 export default Checkout;
