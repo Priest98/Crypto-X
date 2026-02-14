@@ -11,15 +11,18 @@ export const NETWORK_CONFIG = {
     storeAddress: 'tb1q3yjskkv6cmhfmafya33xapau689gzf3ykag7t4'
   },
   testnet4: {
-    mempoolApi: 'https://mempool.space/testnet4/api',
+    // Primary: https://btc-testnet4.xverse.app | Fallback: https://mempool.space/testnet4/api
+    mempoolApi: 'https://btc-testnet4.xverse.app',
     storeAddress: 'tb1q3yjskkv6cmhfmafya33xapau689gzf3ykag7t4'
   },
   signet: {
-    mempoolApi: 'https://mempool.space/signet/api',
+    // Primary: https://btc-signet.xverse.app | Fallback: https://mempool.space/signet/api
+    mempoolApi: 'https://btc-signet.xverse.app',
     storeAddress: 'tb1q3yjskkv6cmhfmafya33xapau689gzf3ykag7t4'
   },
   regtest: {
-    mempoolApi: 'http://localhost:3000/api',
+    // SBTC Mempool Proxy
+    mempoolApi: 'https://beta.sbtc-mempool.tech/api/proxy',
     storeAddress: 'bcrt1q8c8v4v6y28p8v28v28v28v28v28v28v28v28'
   }
 };
