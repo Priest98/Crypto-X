@@ -40,7 +40,7 @@ export class MidlClient {
         throw new Error('Unsupported wallet provider');
     }
 
-    async executeBitcoinPayment(amountSats: number, recipient: string, network: MidlConfig['network'], walletType?: 'Xverse' | 'UniSat'): Promise<string> {
+    async executeBitcoinPayment(amountSats: number, recipient: string, network: MidlConfig['network'], walletType?: 'Xverse' | 'UniSat', senderAddress?: string): Promise<string> {
         // Allow overriding or setting the connected wallet type (e.g. from persisted state)
         if (walletType) {
             this.connectedWallet = walletType;
@@ -62,10 +62,10 @@ export class MidlClient {
             throw new Error("No wallet connected. Please connect a wallet first.");
         }
 
-        console.log(`[Midl] Executing payment via ${this.connectedWallet} on ${network}`);
+        console.log(`[Midl] Executing payment via ${this.connectedWallet} on ${network}. Sender: ${senderAddress || 'auto'}`);
 
         if (this.connectedWallet === 'Xverse') {
-            return this.sendXverseTransaction(amountSats, recipient, network);
+            return this.sendXverseTransaction(amountSats, recipient, network, senderAddress);
         } else if (this.connectedWallet === 'UniSat') {
             return this.sendUniSatTransaction(amountSats, recipient, network);
         }
@@ -141,17 +141,25 @@ export class MidlClient {
         };
     }
 
-    private async sendXverseTransaction(amount: number, recipient: string, network: MidlConfig['network']): Promise<string> {
+    private async sendXverseTransaction(amount: number, recipient: string, network: MidlConfig['network'], senderAddress?: string): Promise<string> {
         return new Promise((resolve, reject) => {
             const btcNetwork = this.mapToSatsConnectNetwork(network);
+            console.log("Invoking Xverse sendBtcTransaction with network:", btcNetwork);
+
             sendBtcTransaction({
                 payload: {
                     network: { type: btcNetwork },
                     recipients: [{ address: recipient, amountSats: BigInt(amount) }],
-                    senderAddress: '' // automatic
+                    senderAddress: senderAddress || undefined // Undefined prompts selection if needed, but explicit is better
                 },
-                onFinish: (txid) => resolve(txid),
-                onCancel: () => reject(new Error('Transaction Cancelled')),
+                onFinish: (txid) => {
+                    console.log("Xverse Transaction Finished:", txid);
+                    resolve(txid);
+                },
+                onCancel: () => {
+                    console.warn("Xverse Transaction Cancelled");
+                    reject(new Error('Transaction Cancelled'));
+                }
             });
         });
     }

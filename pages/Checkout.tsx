@@ -100,7 +100,8 @@ const Checkout: React.FC = () => {
         Math.floor(total * 100000000), // Convert to sats
         btcAddress,
         network,
-        wallet.type as 'Xverse' | 'UniSat'
+        wallet.type as 'Xverse' | 'UniSat',
+        wallet.paymentAddress || wallet.address
       );
 
       if (txid) {
