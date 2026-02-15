@@ -30,56 +30,56 @@ export const NETWORK_CONFIG = {
 export const INITIAL_PRODUCTS: Product[] = [
   {
     id: '1',
-    name: 'Monogrammed Silk Atelier Shirt',
-    description: '100% heavy-weight mulberry silk featuring a subtle jacquard Bitcoin pattern. Hand-finished in Italy for the digital sovereign.',
-    price_btc: 0.0045,
-    image: 'https://images.unsplash.com/photo-1620012253295-c15cc3ef6548?q=80&w=1965&auto=format&fit=crop',
-    stock: 12,
-    category: 'Atelier'
+    name: 'Burgundy Field Jacket',
+    description: 'Tech-infused burgundy field jacket with silk scarf accent. Water-resistant treated cotton canvas with hidden key storage.',
+    price_btc: 0.0055,
+    image: 'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?q=75&w=800&auto=format&fit=crop', // Burgundy/Reddish jacket (reverting to a known good coat image)
+    stock: 8,
+    category: 'Outerwear'
   },
   {
     id: '2',
-    name: 'Genesis Block Wool Overcoat',
-    description: 'Double-breasted tailored coat crafted from ultra-fine virgin wool. Features an internal QR code linking to the Genesis Block hash.',
-    price_btc: 0.015,
-    image: 'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?q=80&w=1936&auto=format&fit=crop',
-    stock: 5,
+    name: 'Crimson Wrap Coat',
+    description: 'Minimalist deep red wool wrap coat. Features a geometric embroidered sigil on the back collar. Japanese denim lining.',
+    price_btc: 0.018,
+    image: 'https://images.unsplash.com/photo-1487222477894-8943e31ef7b2?q=80&w=800&auto=format&fit=crop', // Reliable fashion image
+    stock: 4,
     category: 'Outerwear'
   },
   {
     id: '3',
-    name: 'Sovereign Diver Chronograph',
-    description: 'Swiss-made automatic movement housed in a black DLC titanium case. Water-resistant to 300m. The ultimate tool watch for the high-time-preference age.',
-    price_btc: 0.085,
-    image: 'https://images.unsplash.com/photo-1524592094714-0f0654e20314?q=80&w=1999&auto=format&fit=crop',
-    stock: 20,
+    name: 'Chronos Titanium',
+    description: 'Black DLC titanium chronograph. Swiss automatic movement. Sapphire crystal caseback revealing the escapement.',
+    price_btc: 0.125,
+    image: 'https://images.unsplash.com/photo-1522312346375-d1a52e2b99b3?q=75&w=800&auto=format&fit=crop', // Luxury watch
+    stock: 10,
     category: 'Timepieces'
   },
   {
     id: '4',
-    name: 'Halving Edition Cashmere Hoodie',
-    description: 'Unrivaled softness. Loro Piana cashmere blend with "21,000,000" embroidered in high-density orange silk thread.',
-    price_btc: 0.0032,
-    image: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?q=80&w=1974&auto=format&fit=crop',
-    stock: 40,
+    name: 'Olive Drab Tunic',
+    description: 'Oversized olive tunic in organic hemp structure. Breathable, durable, and antimicrobial. Future-primitive aesthetic.',
+    price_btc: 0.0028,
+    image: 'https://images.unsplash.com/photo-1516762689617-e1cffcef479d?q=75&w=800&auto=format&fit=crop', // Olive/Green clothing
+    stock: 25,
     category: 'Essentials'
   },
   {
     id: '5',
-    name: 'Block 0 Leather Chelsea Boots',
-    description: 'Hand-burnished calfskin leather with a discrete orange sole-plate. The foundation of a sovereign wardrobe.',
-    price_btc: 0.0068,
-    image: 'https://images.unsplash.com/photo-1638247025967-b4e38f787b76?q=80&w=2000&auto=format&fit=crop',
-    stock: 15,
-    category: 'Footwear'
+    name: 'Slate Minimalist Set',
+    description: 'Coordinated shirt and trouser set in slate gray. Bamboo-viscose blend for draping silhouette.',
+    price_btc: 0.0075,
+    image: 'https://images.unsplash.com/photo-1617137984095-74e4e5e3613f?q=75&w=800&auto=format&fit=crop', // Minimalist grey outfit
+    stock: 12,
+    category: 'Atelier'
   },
   {
     id: '6',
-    name: 'Satoshi Aviator Sunglasses',
-    description: 'Polarized lenses with anti-reflective coating. Gold-plated titanium frames. See the world clearly.',
-    price_btc: 0.0018,
-    image: 'https://images.unsplash.com/photo-1572635196237-14b3f281503f?q=80&w=2080&auto=format&fit=crop',
-    stock: 30,
-    category: 'Accessories'
+    name: 'Ghost Low-Top Sneakers',
+    description: 'Italian leather low-tops in phantom white. Hand-stitched sole. The silent step.',
+    price_btc: 0.0042,
+    image: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?q=75&w=800&auto=format&fit=crop', // White sneakers
+    stock: 18,
+    category: 'Footwear'
   }
 ];

@@ -33,12 +33,12 @@ const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [products, setProductsState] = useState<Product[]>(() => {
-    const saved = localStorage.getItem('cryptox_products');
+    const saved = localStorage.getItem('cryptox_products_v3');
     return saved ? JSON.parse(saved) : INITIAL_PRODUCTS;
   });
 
   const [cart, setCart] = useState<CartItem[]>(() => {
-    const saved = localStorage.getItem('cryptox_cart');
+    const saved = localStorage.getItem('cryptox_cart_v3');
     return saved ? JSON.parse(saved) : [];
   });
 
@@ -48,7 +48,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   });
 
   const [orders, setOrders] = useState<Order[]>(() => {
-    const saved = localStorage.getItem('cryptox_orders');
+    const saved = localStorage.getItem('cryptox_orders_v3');
     return saved ? JSON.parse(saved) : [];
   });
 
@@ -80,11 +80,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('cryptox_products', JSON.stringify(products));
+    localStorage.setItem('cryptox_products_v3', JSON.stringify(products));
   }, [products]);
 
   useEffect(() => {
-    localStorage.setItem('cryptox_cart', JSON.stringify(cart));
+    localStorage.setItem('cryptox_cart_v3', JSON.stringify(cart));
   }, [cart]);
 
   useEffect(() => {
@@ -92,7 +92,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [wallet]);
 
   useEffect(() => {
-    localStorage.setItem('cryptox_orders', JSON.stringify(orders));
+    localStorage.setItem('cryptox_orders_v3', JSON.stringify(orders));
   }, [orders]);
 
   useEffect(() => {
