@@ -23,7 +23,7 @@ export const NETWORK_CONFIG = {
   regtest: {
     // Midl Regtest Environment
     mempoolApi: 'https://mempool.regtest.midl.xyz/api',
-    storeAddress: 'bcrt1q8c8v4v6y28p8v28v28v28v28v28v28v28v28' // Ensure this is a valid Regtest address from your wallet
+    storeAddress: 'bcrt1q8c8v4v6y28p8v28v28v28v28v28v28v28k4urdx' // Updated with correct checksum
   }
 };
 
