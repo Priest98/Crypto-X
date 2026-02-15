@@ -1,13 +1,13 @@
 
 import React, { useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { ShoppingBag, ChevronLeft, ChevronRight, Zap, ArrowUpRight, Star, Quote } from 'lucide-react';
+import { ShoppingBag, ShoppingCart, ChevronLeft, ChevronRight, Zap, ArrowUpRight, Star, Quote } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import ImageLoader from '../components/ImageLoader';
 import PaymentModal from '../components/PaymentModal';
 
 const Home: React.FC = () => {
-  const { products } = useStore();
+  const { products, addToCart } = useStore();
   const featured = products.slice(0, 6);
   const arrivalsRef = useRef<HTMLDivElement>(null);
   const reviewsRef = useRef<HTMLDivElement>(null);
@@ -116,10 +116,10 @@ const Home: React.FC = () => {
                       <span className="text-2xl font-black">{product.price_btc}</span>
                     </div>
                     <button
-                      onClick={() => handleBuyNow(product)}
+                      onClick={() => addToCart(product)}
                       className="w-14 h-14 bg-white text-black rounded-full flex items-center justify-center hover:bg-primary transition-all duration-500 active:scale-90 shadow-xl"
                     >
-                      <ShoppingBag size={20} />
+                      <ShoppingCart size={20} />
                     </button>
                   </div>
                 </div>
