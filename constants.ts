@@ -21,9 +21,9 @@ export const NETWORK_CONFIG = {
     storeAddress: 'tb1q3yjskkv6cmhfmafya33xapau689gzf3ykag7t4'
   },
   regtest: {
-    // SBTC Mempool Proxy
-    mempoolApi: 'https://beta.sbtc-mempool.tech/api/proxy',
-    storeAddress: 'bcrt1q8c8v4v6y28p8v28v28v28v28v28v28v28v28'
+    // Midl Regtest Environment
+    mempoolApi: 'https://mempool.staging.midl.xyz/api',
+    storeAddress: 'bcrt1q8c8v4v6y28p8v28v28v28v28v28v28v28v28' // Ensure this is a valid Regtest address from your wallet
   }
 };
 

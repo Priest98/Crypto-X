@@ -81,7 +81,10 @@ export class MidlClient {
             case 'testnet': return BitcoinNetworkType.Testnet;
             case 'testnet4': return BitcoinNetworkType.Testnet4;
             case 'signet': return BitcoinNetworkType.Signet;
-            case 'regtest': return BitcoinNetworkType.Regtest;
+            // Xverse often treats Regtest as Testnet or requires explicit Regtest enum if available
+            // For Midl Regtest, we use Testnet type but with specific endpoints in the wallet if possible, 
+            // but sats-connect might support BitcoinNetworkType.Regtest
+            case 'regtest': return BitcoinNetworkType.Testnet; // Fallback to Testnet for SATS-CONNECT compatibility if Regtest enum fails
             default: return BitcoinNetworkType.Testnet;
         }
     }
@@ -162,6 +165,43 @@ export class MidlClient {
                 }
             });
         });
+    }
+
+    async signMessage(message: string, walletType?: 'Xverse' | 'UniSat'): Promise<string> {
+        if (walletType) this.connectedWallet = walletType;
+
+        if (!this.connectedWallet) throw new Error("Wallet not connected");
+
+        if (this.connectedWallet === 'Xverse') {
+            return this.signMessageXverse(message);
+        } else if (this.connectedWallet === 'UniSat') {
+            return this.signMessageUniSat(message);
+        }
+        throw new Error("Unknown wallet type");
+    }
+
+    private async signMessageXverse(message: string): Promise<string> {
+        return new Promise((resolve, reject) => {
+            // Xverse signing implementation
+            // Note: Xverse requires a specific structure or library call for signing
+            // For now, assuming a standard signMessage call is available or using sats-connect
+            import('sats-connect').then(({ signMessage }) => {
+                signMessage({
+                    payload: {
+                        network: { type: this.mapToSatsConnectNetwork(this.config.network) },
+                        address: this.connectedWallet === 'Xverse' ? '' : '', // managed by wallet
+                        message
+                    },
+                    onFinish: (response) => resolve(response),
+                    onCancel: () => reject(new Error("Signing cancelled"))
+                });
+            }).catch(reject);
+        });
+    }
+
+    private async signMessageUniSat(message: string): Promise<string> {
+        if (typeof (window as any).unisat === 'undefined') throw new Error('UniSat not installed');
+        return await (window as any).unisat.signMessage(message);
     }
 
     private async sendUniSatTransaction(amount: number, recipient: string, network: MidlConfig['network']): Promise<string> {

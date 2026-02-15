@@ -6,12 +6,13 @@ import { Loader2, CheckCircle2, Copy, ExternalLink, QrCode, ArrowLeft, Shield, Z
 import { OrderStatus } from '../types';
 import { NETWORK_CONFIG } from '../constants';
 import { executeBitcoinPayment } from '../services/walletService';
+import WalletAuth from '../components/WalletAuth';
 
 const Checkout: React.FC = () => {
   const { cart, wallet, clearCart, createOrder, btcPrice, network } = useStore();
   const navigate = useNavigate();
 
-  const [step, setStep] = useState<'invoice' | 'verifying' | 'success'>('invoice');
+  const [step, setStep] = useState<'auth' | 'invoice' | 'verifying' | 'success'>('auth');
   const [invoiceId] = useState(() => `TX-${Math.random().toString(36).substr(2, 6).toUpperCase()}`);
 
   const btcAddress = NETWORK_CONFIG[network]?.storeAddress || NETWORK_CONFIG['testnet'].storeAddress;
@@ -95,6 +96,7 @@ const Checkout: React.FC = () => {
     setVerificationError(null);
 
     try {
+
       // Execute Real Payment
       const txid = await executeBitcoinPayment(
         Math.floor(total * 100000000), // Convert to sats
@@ -105,8 +107,26 @@ const Checkout: React.FC = () => {
       );
 
       if (txid) {
-        // Optionally wait for mempool propagation or just settle
-        completeSettlement(txid);
+        // Store Payment in Backend
+        try {
+          await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/payments/store`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              txid,
+              orderId: invoiceId,
+              amount: Math.floor(total * 100000000),
+              walletAddress: wallet.address,
+              network
+            })
+          });
+        } catch (e) {
+          console.error("Failed to store payment proof backend", e);
+        }
+
+        // Start Verification Polling
+        setConfirmedTxId(txid);
+        pollVerification(txid);
       } else {
         throw new Error('Transaction failed');
       }
@@ -115,6 +135,26 @@ const Checkout: React.FC = () => {
       setStep('invoice');
       setVerificationError(error.message || 'Payment failed');
     }
+  };
+
+  const pollVerification = (txid: string) => {
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/payments/verify/${txid}`);
+        const data = await res.json();
+
+        if (data.status === 'confirmed') {
+          clearInterval(interval);
+          completeSettlement(txid);
+        } else if (data.confirmations > 0) {
+          // Optionally show progress
+        }
+      } catch (e) {
+        console.error("Verification poll failed", e);
+      }
+    }, 5000); // Poll every 5s
+
+    // Auto-complete for demo/regtest if needed after some time or force manual check logic
   };
 
   if (step === 'success') {
@@ -169,54 +209,63 @@ const Checkout: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-24">
-        {/* Payment Manifest */}
+        {/* Payment Manifest or Auth */}
         <div className="space-y-12 animate-in fade-in slide-in-from-left-8 duration-1000 delay-200">
-          <div className="glass-ios rounded-[60px] p-12 space-y-10 relative overflow-hidden border border-white/5 shadow-2xl">
-            <div className="flex items-center justify-between">
-              <span className="text-gray-600 font-black text-[10px] uppercase tracking-widest">Digital Invoice</span>
-              <span className="font-mono text-sm text-primary">{invoiceId}</span>
-            </div>
-
-            <div className="text-center py-12 glass-ios rounded-[40px] bg-white/[0.01]">
-              <span className="text-gray-600 text-[10px] font-black uppercase tracking-[0.3em] block mb-4">Settlement Amount</span>
-              <div className="flex items-center justify-center space-x-3 text-primary">
-                <span className="text-4xl font-black italic">₿</span>
-                <span className="text-7xl font-black tracking-tighter">{total.toFixed(8)}</span>
+          {step === 'auth' ? (
+            <WalletAuth onAuthenticated={(sig) => {
+              console.log("Authenticated with signature:", sig);
+              setStep('invoice');
+            }} />
+          ) : (
+            <div className="glass-ios rounded-[60px] p-12 space-y-10 relative overflow-hidden border border-white/5 shadow-2xl">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600 font-black text-[10px] uppercase tracking-widest">Digital Invoice</span>
+                <span className="font-mono text-sm text-primary">{invoiceId}</span>
               </div>
-              <span className="text-xl font-bold text-gray-500 mt-2 block">≈ ${(total * btcPrice).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-            </div>
 
-            <div className="space-y-6">
-              <label className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-600">Store Bitcoin Address</label>
-              <div className="flex items-center glass-ios rounded-[28px] p-4 group">
-                <code className="flex-grow text-xs truncate mr-4 font-mono text-white/70">{btcAddress}</code>
-                <button
-                  onClick={() => copyToClipboard(btcAddress)}
-                  className="p-4 bg-white/5 hover:bg-primary hover:text-black rounded-2xl transition-all"
-                >
-                  <Copy size={18} />
-                </button>
+              <div className="text-center py-12 glass-ios rounded-[40px] bg-white/[0.01]">
+                <span className="text-gray-600 text-[10px] font-black uppercase tracking-[0.3em] block mb-4">Settlement Amount</span>
+                <div className="flex items-center justify-center space-x-3 text-primary">
+                  <span className="text-4xl font-black italic">₿</span>
+                  <span className="text-7xl font-black tracking-tighter">{total.toFixed(8)}</span>
+                </div>
+                <span className="text-xl font-bold text-gray-500 mt-2 block">≈ ${(total * btcPrice).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </div>
-            </div>
 
-            <div className="flex items-center justify-center py-6">
-              <div className="bg-white p-8 rounded-[48px] shadow-[0_0_80px_rgba(255,255,255,0.1)] group hover:scale-105 transition-transform duration-1000">
-                <div className="w-56 h-56 bg-black flex items-center justify-center relative rounded-[32px] overflow-hidden">
-                  <QrCode size={180} className="text-white" />
-                  <div className="absolute inset-0 flex items-center justify-center opacity-5">
-                    <span className="text-white font-black text-6xl italic">₿</span>
+              <div className="space-y-6">
+                <label className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-600">Store Bitcoin Address</label>
+                <div className="flex items-center glass-ios rounded-[28px] p-4 group">
+                  <code className="flex-grow text-xs truncate mr-4 font-mono text-white/70">{btcAddress}</code>
+                  <button
+                    onClick={() => copyToClipboard(btcAddress)}
+                    className="p-4 bg-white/5 hover:bg-primary hover:text-black rounded-2xl transition-all"
+                  >
+                    <Copy size={18} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-center py-6">
+                <div className="bg-white p-8 rounded-[48px] shadow-[0_0_80px_rgba(255,255,255,0.1)] group hover:scale-105 transition-transform duration-1000">
+                  <div className="w-56 h-56 bg-black flex items-center justify-center relative rounded-[32px] overflow-hidden">
+                    <QrCode size={180} className="text-white" />
+                    <div className="absolute inset-0 flex items-center justify-center opacity-5">
+                      <span className="text-white font-black text-6xl italic">₿</span>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
 
-          <div className="flex items-start space-x-6 px-10">
-            <Shield className="text-primary shrink-0 mt-1" size={28} />
-            <p className="text-xs text-gray-500 font-medium leading-relaxed uppercase tracking-widest">
-              Secure Peer-to-Peer settlement. This invoice will expire in <span className="text-white">15:00</span>. Authenticate via your {wallet?.type} wallet or external node.
-            </p>
-          </div>
+          {step !== 'auth' && (
+            <div className="flex items-start space-x-6 px-10">
+              <Shield className="text-primary shrink-0 mt-1" size={28} />
+              <p className="text-xs text-gray-500 font-medium leading-relaxed uppercase tracking-widest">
+                Secure Peer-to-Peer settlement. This invoice will expire in <span className="text-white">15:00</span>. Authenticate via your {wallet?.type} wallet or external node.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Verification Logic */}
