@@ -8,7 +8,7 @@ interface WalletAuthProps {
 }
 
 const WalletAuth: React.FC<WalletAuthProps> = ({ onAuthenticated }) => {
-    const { wallet } = useStore();
+    const { wallet, network } = useStore();
     const [isSigning, setIsSigning] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -19,7 +19,8 @@ const WalletAuth: React.FC<WalletAuthProps> = ({ onAuthenticated }) => {
 
         try {
             const message = `Authenticate ownership of wallet ${wallet.address} for Midl Regtest Payment at ${new Date().toISOString()}`;
-            const signature = await midlClient.signMessage(message, wallet.type as 'Xverse' | 'UniSat');
+            // Pass network explicitly to prevent default 'testnet' fallback after reload
+            const signature = await midlClient.signMessage(message, network, wallet.type as 'Xverse' | 'UniSat', wallet.address);
             onAuthenticated(signature);
         } catch (err: any) {
             console.error("Signing failed:", err);

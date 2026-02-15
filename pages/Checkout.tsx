@@ -259,11 +259,36 @@ const Checkout: React.FC = () => {
           )}
 
           {step !== 'auth' && (
-            <div className="flex items-start space-x-6 px-10">
-              <Shield className="text-primary shrink-0 mt-1" size={28} />
-              <p className="text-xs text-gray-500 font-medium leading-relaxed uppercase tracking-widest">
-                Secure Peer-to-Peer settlement. This invoice will expire in <span className="text-white">15:00</span>. Authenticate via your {wallet?.type} wallet or external node.
-              </p>
+            <div className="space-y-4 px-8">
+              <div className="flex items-start space-x-6">
+                <Shield className="text-primary shrink-0 mt-1" size={28} />
+                <p className="text-xs text-gray-500 font-medium leading-relaxed uppercase tracking-widest">
+                  Secure Peer-to-Peer settlement. This invoice will expire in <span className="text-white">15:00</span>. Authenticate via your {wallet?.type} wallet or external node.
+                </p>
+              </div>
+
+              {/* Low Balance Warning */}
+              {wallet?.balance !== undefined && wallet.balance < (total * 100000000) && (
+                <div className="glass-ios p-6 rounded-3xl border border-red-500/20 bg-red-500/5 flex items-center justify-between">
+                  <div className="flex items-center space-x-4 text-red-400">
+                    <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center shrink-0">
+                      <span className="font-black text-lg">!</span>
+                    </div>
+                    <div>
+                      <h4 className="font-black uppercase tracking-widest text-xs mb-1">Insufficient Funds</h4>
+                      <p className="text-xs opacity-70">Balance: {wallet.balance.toLocaleString()} sats | Required: {Math.ceil(total * 100000000).toLocaleString()} sats</p>
+                    </div>
+                  </div>
+                  <a
+                    href={network === 'testnet4' ? "https://faucet.bitcoin.signet.io/" : "https://coinfaucet.eu/en/btc-testnet/"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-4 py-2 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors"
+                  >
+                    Get Tokens
+                  </a>
+                </div>
+              )}
             </div>
           )}
         </div>

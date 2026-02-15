@@ -11,6 +11,7 @@ export interface WalletInfo {
   ordinalsAddress?: string;
   type: WalletType;
   publicKey?: string;
+  balance?: number; // In satoshis
 }
 
 export interface Product {

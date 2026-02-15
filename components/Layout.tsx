@@ -12,8 +12,7 @@ import { NETWORK_CONFIG } from '../constants';
 import { Network } from '../types';
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { cart, wallet, disconnectWallet, toasts, dismissToast, network, setNetwork } = useStore();
-  const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
+  const { cart, wallet, disconnectWallet, toasts, dismissToast, network, setNetwork, isWalletModalOpen, setWalletModalOpen } = useStore();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
 
@@ -89,7 +88,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               </div>
             ) : (
               <button
-                onClick={() => setIsWalletModalOpen(true)}
+                onClick={() => setWalletModalOpen(true)}
                 className="bg-white text-black px-6 py-2.5 rounded-full font-bold text-sm transition-premium hover:bg-primary glow-primary shadow-[0_10px_20px_rgba(0,0,0,0.3)] hover:scale-105"
               >
                 Enter
@@ -185,7 +184,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 <button
                   onClick={() => {
                     setIsMobileMenuOpen(false);
-                    setIsWalletModalOpen(true);
+                    setWalletModalOpen(true);
                   }}
                   className="w-full py-5 rounded-[24px] bg-white text-black font-black text-xl hover:bg-primary transition-colors glow-primary"
                 >
@@ -242,8 +241,8 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         </div>
       </footer>
 
-      <WalletModal isOpen={isWalletModalOpen} onClose={() => setIsWalletModalOpen(false)} />
-    </div>
+      <WalletModal isOpen={isWalletModalOpen} onClose={() => setWalletModalOpen(false)} />
+    </div >
   );
 };
 

@@ -6,7 +6,7 @@ import { Trash2, Minus, Plus, ShoppingBag, ArrowRight, Wallet, Shield, X, Check 
 import ImageLoader from '../components/ImageLoader';
 
 const Cart: React.FC = () => {
-  const { cart, removeFromCart, updateQuantity, wallet } = useStore();
+  const { cart, removeFromCart, updateQuantity, wallet, setWalletModalOpen } = useStore();
   const navigate = useNavigate();
   const [itemToRemove, setItemToRemove] = React.useState<string | null>(null);
 
@@ -150,11 +150,11 @@ const Cart: React.FC = () => {
                   <p className="text-primary text-xs font-black uppercase tracking-widest text-center">Connect wallet to checkout</p>
                 </div>
                 <button
-                  className="w-full bg-white/5 text-gray-500 py-8 rounded-[32px] font-black text-2xl flex items-center justify-center space-x-4 cursor-not-allowed border border-white/5"
-                  disabled
+                  onClick={() => setWalletModalOpen(true)}
+                  className="w-full bg-white text-black py-8 rounded-[32px] font-black text-2xl flex items-center justify-center space-x-4 border border-white/5 hover:bg-primary transition-colors shadow-2xl"
                 >
                   <Wallet size={24} />
-                  <span>Wallet Required</span>
+                  <span>Connect Wallet</span>
                 </button>
               </div>
             )}

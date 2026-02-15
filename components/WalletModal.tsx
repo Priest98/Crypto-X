@@ -6,7 +6,7 @@ import { X, CheckCircle2, AlertCircle, ExternalLink, Shield, Zap, ArrowRight } f
 import { ConnectionStatus } from '../types';
 
 const WalletModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
-  const { connectWallet: setStoreWallet, network } = useStore();
+  const { connectWallet: setStoreWallet, network, resetApp } = useStore();
   const [status, setStatus] = useState<ConnectionStatus>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [connectedAddress, setConnectedAddress] = useState<string | null>(null);
@@ -90,9 +90,17 @@ const WalletModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpe
                   <CheckCircle2 size={40} className="text-green-500" />
                 </div>
                 <h2 className="text-4xl font-black text-white mb-4 tracking-tight">Identity Verified</h2>
-                <p className="text-gray-400 font-mono bg-black/50 px-6 py-3 rounded-xl border border-white/10 inline-block text-lg">
-                  {connectedAddress?.slice(0, 8)}...{connectedAddress?.slice(-8)}
-                </p>
+                <div className="flex flex-col items-center space-y-2">
+                  <p className="text-gray-400 font-mono bg-black/50 px-6 py-3 rounded-xl border border-white/10 inline-block text-lg">
+                    {connectedAddress?.slice(0, 8)}...{connectedAddress?.slice(-8)}
+                  </p>
+                  {/* Balance Display */}
+                  {network !== 'mainnet' && (
+                    <p className="text-primary font-bold text-sm">
+                      Balance: {(useStore().wallet?.balance || 0).toLocaleString()} sats
+                    </p>
+                  )}
+                </div>
               </div>
             ) : (
               <div className="space-y-12">
@@ -125,9 +133,16 @@ const WalletModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpe
                     <span className="relative z-10">Connect Xverse</span>
                     <ArrowRight className="relative z-10 transition-transform group-hover:translate-x-2" size={28} />
                     {status === 'connecting' && (
-                      <div className="absolute inset-0 bg-white/50 animate-pulse z-20"></div>
+                      <div className="absolute inset-0 bg-white/50 animate-pulse z-20 flex items-center justify-center">
+                        <span className="text-black font-bold text-sm">Open Wallet App...</span>
+                      </div>
                     )}
                   </button>
+                  {status === 'connecting' && (
+                    <p className="text-xs text-center text-gray-500 mt-2">
+                      If on mobile, tap here to <a href="xverse://" className="text-white underline">open Xverse</a> manually.
+                    </p>
+                  )}
 
                   {/* Secondary Actions */}
                   <div className="grid grid-cols-2 gap-4 w-full">
@@ -152,10 +167,23 @@ const WalletModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpe
                   </div>
                 </div>
 
-                <div className="pt-12 flex justify-center space-x-12 text-[10px] font-black tracking-[0.3em] text-white/20 uppercase">
-                  <span>Non-Custodial</span>
-                  <span>Direct BTC</span>
-                  <span>Peer-to-Peer</span>
+                <div className="pt-12 flex flex-col items-center space-y-4">
+                  <button
+                    onClick={() => {
+                      if (confirm("Reset wallet connection and app state?")) {
+                        resetApp();
+                        onClose();
+                      }
+                    }}
+                    className="text-[10px] text-red-500/50 hover:text-red-500 uppercase tracking-widest font-black transition-colors"
+                  >
+                    Disconnect & Reset
+                  </button>
+                  <div className="flex justify-center space-x-12 text-[10px] font-black tracking-[0.3em] text-white/20 uppercase">
+                    <span>Non-Custodial</span>
+                    <span>Direct BTC</span>
+                    <span>Peer-to-Peer</span>
+                  </div>
                 </div>
               </div>
             )}
