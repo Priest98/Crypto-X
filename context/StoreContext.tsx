@@ -51,7 +51,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [btcPrice, setBtcPrice] = useState<number>(0);
-  const [network, setNetwork] = useState<Network>('testnet4');
+  const [network, setNetwork] = useState<Network>(() => {
+    const saved = localStorage.getItem('cryptox_network');
+    return (saved as Network) || 'testnet4';
+  });
 
   useEffect(() => {
     const fetchBtcPrice = async () => {
@@ -87,6 +90,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     localStorage.setItem('cryptox_orders', JSON.stringify(orders));
   }, [orders]);
+
+  useEffect(() => {
+    localStorage.setItem('cryptox_network', network);
+  }, [network]);
 
   const showToast = useCallback((message: string, type: ToastType = 'success') => {
     const id = `toast-${Date.now()}-${Math.random()}`;
