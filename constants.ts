@@ -8,22 +8,26 @@ export const NETWORK_CONFIG = {
   },
   testnet: {
     mempoolApi: 'https://mempool.space/testnet/api',
-    storeAddress: 'tb1q3yjskkv6cmhfmafya33xapau689gzf3ykag7t4'
+    storeAddress: 'tb1q3yjskkv6cmhfmafya33xapau689gzf3ykag7t4',
+    faucetUrl: 'https://faucet.midl.xyz/'
   },
   testnet4: {
     // Primary: https://btc-testnet4.xverse.app | Fallback: https://mempool.space/testnet4/api
     mempoolApi: 'https://btc-testnet4.xverse.app',
-    storeAddress: 'tb1q3yjskkv6cmhfmafya33xapau689gzf3ykag7t4'
+    storeAddress: 'tb1q3yjskkv6cmhfmafya33xapau689gzf3ykag7t4',
+    faucetUrl: 'https://faucet.midl.xyz/'
   },
   signet: {
     // Primary: https://btc-signet.xverse.app | Fallback: https://mempool.space/signet/api
     mempoolApi: 'https://btc-signet.xverse.app',
-    storeAddress: 'tb1q3yjskkv6cmhfmafya33xapau689gzf3ykag7t4'
+    storeAddress: 'tb1q3yjskkv6cmhfmafya33xapau689gzf3ykag7t4',
+    faucetUrl: 'https://faucet.midl.xyz/'
   },
   regtest: {
     // Midl Regtest Environment
     mempoolApi: 'https://mempool.regtest.midl.xyz/api',
-    storeAddress: 'bcrt1q8c8v4v6y28p8v28v28v28v28v28v28v28k4urdx' // Updated with correct checksum
+    storeAddress: 'bcrt1q8c8v4v6y28p8v28v28v28v28v28v28v28k4urdx', // Updated with correct checksum
+    faucetUrl: 'https://faucet.midl.xyz/'
   }
 };
 

@@ -97,6 +97,10 @@ const Checkout: React.FC = () => {
 
     try {
 
+      if (total <= 0) {
+        throw new Error('Cart is empty. Please add items before checking out.');
+      }
+
       // Execute Real Payment
       const txid = await executeBitcoinPayment(
         Math.floor(total * 100000000), // Convert to sats
@@ -128,17 +132,23 @@ const Checkout: React.FC = () => {
         setConfirmedTxId(txid);
         pollVerification(txid);
       } else {
-        throw new Error('Transaction failed');
+        throw new Error('No transaction ID returned from wallet. Please check your transaction history.');
       }
     } catch (error: any) {
-      console.error("Payment Step Error:", error);
+      console.error("Full Payment Error:", error);
       setStep('invoice');
 
       let friendlyMessage = error.message || 'Payment failed';
-      if (error.message === 'USER_CANCELLED' || error.message === 'Transaction Cancelled') {
-        friendlyMessage = 'Payment was cancelled in the wallet.';
-      } else if (error.message.includes('insufficient')) {
-        friendlyMessage = 'Insufficient funds to cover transaction and dust fees.';
+
+      // Handle known error patterns
+      if (error.message === 'USER_CANCELLED' || error.message?.includes('cancelled')) {
+        friendlyMessage = 'Transaction was cancelled by user.';
+      } else if (error.message?.toLowerCase().includes('insufficient')) {
+        friendlyMessage = 'Insufficient funds for payment + network fees.';
+      } else if (error.message?.includes('Invalid address')) {
+        friendlyMessage = 'Invalid store address for this network.';
+      } else if (typeof error === 'object' && error.error?.message) {
+        friendlyMessage = error.error.message;
       }
 
       setVerificationError(friendlyMessage);
@@ -288,7 +298,7 @@ const Checkout: React.FC = () => {
                     </div>
                   </div>
                   <a
-                    href={network === 'testnet4' ? "https://faucet.bitcoin.signet.io/" : "https://coinfaucet.eu/en/btc-testnet/"}
+                    href={NETWORK_CONFIG[network]?.faucetUrl || "https://faucet.midl.xyz/"}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="px-4 py-2 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors"
