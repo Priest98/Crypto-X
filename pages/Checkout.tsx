@@ -112,26 +112,12 @@ const Checkout: React.FC = () => {
       );
 
       if (txid) {
-        // Store Payment in Backend
-        try {
-          await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/payments/store`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              txid,
-              orderId: invoiceId,
-              amount: Math.floor(total * 100000000),
-              walletAddress: wallet.address,
-              network
-            })
-          });
-        } catch (e) {
-          console.error("Failed to store payment proof backend", e);
-        }
+        console.log('Transaction successful! TxID:', txid);
 
-        // Start Verification Polling
-        setConfirmedTxId(txid);
-        pollVerification(txid);
+        // Complete settlement immediately (frontend-only, no backend)
+        setTimeout(() => {
+          completeSettlement(txid);
+        }, 2000); // Small delay for UX
       } else {
         throw new Error('No transaction ID returned from wallet. Please check your transaction history.');
       }
@@ -157,23 +143,30 @@ const Checkout: React.FC = () => {
   };
 
   const pollVerification = (txid: string) => {
+    // Simplified polling - just for demo purposes
+    // In production, you'd verify confirmations via mempool API
     const interval = setInterval(async () => {
       try {
-        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/payments/verify/${txid}`);
-        const data = await res.json();
+        const apiBase = NETWORK_CONFIG[network]?.mempoolApi || NETWORK_CONFIG['testnet'].mempoolApi;
+        const res = await fetch(`${apiBase}/tx/${txid}`);
 
-        if (data.status === 'confirmed') {
-          clearInterval(interval);
-          completeSettlement(txid);
-        } else if (data.confirmations > 0) {
-          // Optionally show progress
+        if (res.ok) {
+          const data = await res.json();
+          console.log('Transaction found on chain:', data);
+
+          // If transaction is confirmed or has confirmations, complete
+          if (data.status?.confirmed || (data.status?.block_height && data.status.block_height > 0)) {
+            clearInterval(interval);
+            // Already completed in completeSettlement
+          }
         }
       } catch (e) {
-        console.error("Verification poll failed", e);
+        console.log("Transaction not yet in mempool, will retry...");
       }
-    }, 5000); // Poll every 5s
+    }, 10000); // Poll every 10s
 
-    // Auto-complete for demo/regtest if needed after some time or force manual check logic
+    // Auto-clear after 5 minutes
+    setTimeout(() => clearInterval(interval), 300000);
   };
 
   if (step === 'success') {
