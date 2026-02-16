@@ -1,69 +1,109 @@
-import { useBalance as useMidlBalance, useDefaultAccount } from '@midl/react';
 import { useEffect, useState, useCallback } from 'react';
+import { midl } from '../lib/midlService';
 
 /**
  * Custom hook for fetching Bitcoin balance with auto-refresh
  * 
- * This wraps MIDL SDK's useBalance and adds:
+ * This fetches balance directly from MIDL service and provides:
+ * - Real blockchain balance via MIDL regtest API
  * - Auto-refresh every 30 seconds
  * - Manual refresh capability
  * - Proper loading and error states
- * - Safe error handling
+ * - Wallet address from localStorage (StoreContext persistence)
  */
 export function useWalletBalance() {
     const [balance, setBalance] = useState(0);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<Error | null>(null);
+    const [walletAddress, setWalletAddress] = useState<string | null>(null);
 
-    // Safely get account - wrap in try-catch
-    let account;
-    try {
-        account = useDefaultAccount();
-    } catch (err) {
-        console.warn('useDefaultAccount failed:', err);
-        account = null;
-    }
-
-    // Safely get balance - wrap in try-catch
-    let midlBalance;
-    let midlIsLoading = false;
-    let midlError = null;
-
-    try {
-        const result = useMidlBalance();
-        midlBalance = result?.balance;
-        midlIsLoading = result?.isLoading || false;
-        midlError = result?.error || null;
-    } catch (err) {
-        console.warn('useMidlBalance failed:', err);
-        midlBalance = 0;
-    }
-
-    // Update state from MIDL SDK
+    // Get wallet address from localStorage (persisted by StoreContext)
     useEffect(() => {
-        if (midlBalance !== undefined && midlBalance !== null) {
-            setBalance(midlBalance);
-        }
-        setIsLoading(midlIsLoading);
-        setError(midlError);
-    }, [midlBalance, midlIsLoading, midlError]);
+        const checkWallet = () => {
+            try {
+                const saved = localStorage.getItem('cryptox_wallet');
+                if (saved) {
+                    const walletData = JSON.parse(saved);
+                    setWalletAddress(walletData.address || null);
+                } else {
+                    setWalletAddress(null);
+                }
+            } catch (err) {
+                console.warn('[useWalletBalance] Failed to parse wallet from localStorage:', err);
+                setWalletAddress(null);
+            }
+        };
 
-    // Manual refresh function
-    const refresh = useCallback(() => {
-        // Just update a key to trigger re-fetch
-        setIsLoading(true);
+        // Check immediately
+        checkWallet();
+
+        // Listen for storage changes (wallet connection/disconnection)
+        window.addEventListener('storage', checkWallet);
+
+        // Also check periodically in case of same-tab updates
+        const interval = setInterval(checkWallet, 1000);
+
+        return () => {
+            window.removeEventListener('storage', checkWallet);
+            clearInterval(interval);
+        };
     }, []);
+
+    // Fetch balance from blockchain
+    const fetchBalance = useCallback(async () => {
+        if (!walletAddress) {
+            setBalance(0);
+            setIsLoading(false);
+            setError(null);
+            return;
+        }
+
+        console.log('[useWalletBalance] Fetching balance for:', walletAddress);
+        setIsLoading(true);
+        setError(null);
+
+        try {
+            const fetchedBalance = await midl.getBalance(walletAddress);
+            console.log('[useWalletBalance] Balance fetched:', fetchedBalance, 'sats');
+            setBalance(fetchedBalance);
+            setError(null);
+        } catch (err: any) {
+            console.error('[useWalletBalance] Failed to fetch balance:', err);
+            setError(err);
+            // Don't reset balance on error - keep showing last known balance
+        } finally {
+            setIsLoading(false);
+        }
+    }, [walletAddress]);
+
+    // Fetch balance when wallet address changes
+    useEffect(() => {
+        if (walletAddress) {
+            fetchBalance();
+        } else {
+            setBalance(0);
+            setIsLoading(false);
+            setError(null);
+        }
+    }, [walletAddress, fetchBalance]);
 
     // Auto-refresh every 30 seconds
     useEffect(() => {
-        if (!account?.address) return;
+        if (!walletAddress) return;
 
         const interval = setInterval(() => {
-            refresh();
+            console.log('[useWalletBalance] Auto-refreshing balance...');
+            fetchBalance();
         }, 30000); // 30 seconds
 
         return () => clearInterval(interval);
-    }, [account?.address, refresh]);
+    }, [walletAddress, fetchBalance]);
+
+    // Manual refresh function
+    const refresh = useCallback(() => {
+        console.log('[useWalletBalance] Manual refresh triggered');
+        fetchBalance();
+    }, [fetchBalance]);
 
     return {
         balance: balance || 0,
@@ -72,6 +112,6 @@ export function useWalletBalance() {
         isLoading,
         error,
         refresh,
-        isConnected: !!account?.address,
+        isConnected: !!walletAddress,
     };
 }

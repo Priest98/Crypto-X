@@ -10,7 +10,7 @@ import WalletAuth from '../components/WalletAuth';
 import InvoiceTimer from '../components/InvoiceTimer';
 
 const Checkout: React.FC = () => {
-  const { cart, wallet, clearCart, createOrder, btcPrice, network } = useStore();
+  const { cart, wallet, clearCart, createOrder, btcPrice, network, refreshBalance } = useStore();
   const navigate = useNavigate();
 
   const [step, setStep] = useState<'auth' | 'invoice' | 'verifying' | 'success'>('auth');
@@ -86,6 +86,10 @@ const Checkout: React.FC = () => {
     setConfirmedTxId(txid);
     setStep('success');
     clearCart();
+
+    // Refresh balance after successful transaction
+    console.log('[Checkout] Refreshing balance after transaction...');
+    refreshBalance();
   };
 
 
