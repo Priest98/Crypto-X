@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { Product, CartItem, Order, WalletInfo, OrderStatus, Network } from '../types';
 import { INITIAL_PRODUCTS, NETWORK_CONFIG } from '../constants';
 import { Toast, ToastType } from '../components/Toast';
+import { useWalletBalance } from '../hooks/useWalletBalance';
 
 interface StoreContextType {
   products: Product[];
@@ -12,6 +13,12 @@ interface StoreContextType {
   toasts: Toast[];
   btcPrice: number;
   network: Network;
+  // Blockchain balance from MIDL SDK
+  balance: number; // Balance in sats
+  balanceBTC: number; // Balance in BTC
+  balanceLoading: boolean;
+  balanceError: any;
+  refreshBalance: () => void;
   setNetwork: (network: Network) => void;
   addToCart: (product: Product) => void;
   removeFromCart: (productId: string) => void;
@@ -32,6 +39,15 @@ interface StoreContextType {
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Use MIDL SDK balance hook (with safe error handling)
+  const {
+    balance,
+    balanceBTC,
+    isLoading: balanceLoading,
+    error: balanceError,
+    refresh: refreshBalance,
+  } = useWalletBalance();
+
   const [products, setProductsState] = useState<Product[]>(() => {
     const saved = localStorage.getItem('cryptox_products_v3');
     return saved ? JSON.parse(saved) : INITIAL_PRODUCTS;
@@ -200,6 +216,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   return (
     <StoreContext.Provider value={{
       products, cart, wallet, orders, toasts, btcPrice, network, setNetwork,
+      // Blockchain balance from MIDL SDK
+      balance: balance || 0,
+      balanceBTC: balanceBTC || 0,
+      balanceLoading,
+      balanceError,
+      refreshBalance,
+      // Cart and wallet actions
       addToCart, removeFromCart, updateQuantity, clearCart,
       connectWallet, disconnectWallet, resetApp, createOrder, updateOrderStatus,
       setProducts, showToast, dismissToast,
