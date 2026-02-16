@@ -168,10 +168,11 @@ export class MidlClient {
                 type: 'Regtest' as any,
                 rpcUrl: 'https://mempool.regtest.midl.xyz/api',
                 rpcFallbackUrl: 'https://mempool.regtest.midl.xyz/api',
-                indexerUrl: 'https://api-regtest-midl.xverse.app',
-                blockExplorerUrl: 'https://mempool-betasbtc.space',
+                // Remove indexerUrl - let Xverse use default regtest indexer
+                blockExplorerUrl: 'https://mempool.regtest.midl.xyz',
                 switch: true
             });
+            console.log('[Midl] Successfully suggested MIDL Regtest network');
         } catch (error) {
             console.warn("Midl network suggestion ignored/failed:", error);
         }
