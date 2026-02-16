@@ -72,16 +72,22 @@ export async function syncWallet(address: string): Promise<WalletSyncResult> {
  */
 export async function fetchUtxos(address: string): Promise<UTXO[]> {
     console.log('[MIDL Service] Fetching UTXOs for:', address);
+    console.log('[MIDL Service] API endpoint:', `${MIDL_REGTEST_API}/address/${address}/utxo`);
 
     try {
         const response = await fetch(`${MIDL_REGTEST_API}/address/${address}/utxo`);
 
+        console.log('[MIDL Service] UTXO fetch response status:', response.status, response.statusText);
+
         if (!response.ok) {
+            const errorText = await response.text();
+            console.error('[MIDL Service] UTXO fetch failed with error:', errorText);
             throw new Error(`Failed to fetch UTXOs: ${response.statusText}`);
         }
 
         const utxos: UTXO[] = await response.json();
 
+        console.log('[MIDL Service] Raw UTXO response:', JSON.stringify(utxos, null, 2));
         console.log('[MIDL Service] Found', utxos.length, 'UTXOs');
         return utxos;
     } catch (error) {
