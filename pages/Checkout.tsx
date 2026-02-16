@@ -110,13 +110,16 @@ const Checkout: React.FC = () => {
           const walletData = await midl.syncWallet(wallet.address);
           console.log('[Checkout] Wallet synced:', walletData);
 
-          // Check if wallet has confirmed UTXOs
-          const confirmedUtxos = walletData.utxos.filter((u: any) => u.status.confirmed);
-          if (confirmedUtxos.length === 0) {
-            throw new Error('No confirmed UTXOs available. Please wait for your previous transactions to confirm or fund your wallet from the faucet.');
+          // Check if wallet has any UTXOs (allow unconfirmed for regtest)
+          if (walletData.utxos.length === 0) {
+            throw new Error('No UTXOs available. Please fund your wallet from https://faucet.midl.xyz/');
           }
 
-          console.log('[Checkout] Found', confirmedUtxos.length, 'confirmed UTXOs');
+          const confirmedUtxos = walletData.utxos.filter((u: any) => u.status.confirmed);
+          const unconfirmedUtxos = walletData.utxos.filter((u: any) => !u.status.confirmed);
+
+          console.log('[Checkout] Total UTXOs:', walletData.utxos.length, '(', confirmedUtxos.length, 'confirmed,', unconfirmedUtxos.length, 'unconfirmed)');
+          console.log('[Checkout] Balance:', walletData.balance, 'sats');
         } catch (syncError: any) {
           console.error('[Checkout] Wallet sync failed:', syncError);
           throw new Error(`Wallet sync failed: ${syncError.message}`);
