@@ -7,6 +7,7 @@ import { OrderStatus } from '../types';
 import { NETWORK_CONFIG } from '../constants';
 import { executeBitcoinPayment } from '../services/walletService';
 import WalletAuth from '../components/WalletAuth';
+import InvoiceTimer from '../components/InvoiceTimer';
 
 const Checkout: React.FC = () => {
   const { cart, wallet, clearCart, createOrder, btcPrice, network } = useStore();
@@ -235,81 +236,92 @@ const Checkout: React.FC = () => {
               setStep('invoice');
             }} />
           ) : (
-            <div className="glass-ios rounded-[60px] p-12 space-y-10 relative overflow-hidden border border-white/5 shadow-2xl">
-              <div className="flex items-center justify-between">
-                <span className="text-gray-600 font-black text-[10px] uppercase tracking-widest">Digital Invoice</span>
-                <span className="font-mono text-sm text-primary">{invoiceId}</span>
-              </div>
+            <>
+              {/* Invoice Timer */}
+              <InvoiceTimer
+                durationMinutes={15}
+                onExpire={() => {
+                  setVerificationError('Invoice expired. Please return to cart and try again.');
+                }}
+              />
 
-              <div className="text-center py-12 glass-ios rounded-[40px] bg-white/[0.01]">
-                <span className="text-gray-600 text-[10px] font-black uppercase tracking-[0.3em] block mb-4">Settlement Amount</span>
-                <div className="flex items-center justify-center space-x-3 text-primary">
-                  <span className="text-4xl font-black italic">₿</span>
-                  <span className="text-7xl font-black tracking-tighter">{total.toFixed(8)}</span>
+              <div className="glass-ios rounded-[60px] p-12 space-y-10 relative overflow-hidden border border-white/5 shadow-2xl">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600 font-black text-[10px] uppercase tracking-widest">Digital Invoice</span>
+                  <span className="font-mono text-sm text-primary">{invoiceId}</span>
                 </div>
-                <span className="text-xl font-bold text-gray-500 mt-2 block">≈ ${(total * btcPrice).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-              </div>
 
-              <div className="space-y-6">
-                <label className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-600">Store Bitcoin Address</label>
-                <div className="flex items-center glass-ios rounded-[28px] p-4 group">
-                  <code className="flex-grow text-xs truncate mr-4 font-mono text-white/70">{btcAddress}</code>
-                  <button
-                    onClick={() => copyToClipboard(btcAddress)}
-                    className="p-4 bg-white/5 hover:bg-primary hover:text-black rounded-2xl transition-all"
-                  >
-                    <Copy size={18} />
-                  </button>
+                <div className="text-center py-12 glass-ios rounded-[40px] bg-white/[0.01]">
+                  <span className="text-gray-600 text-[10px] font-black uppercase tracking-[0.3em] block mb-4">Settlement Amount</span>
+                  <div className="flex items-center justify-center space-x-3 text-primary">
+                    <span className="text-4xl font-black italic">₿</span>
+                    <span className="text-7xl font-black tracking-tighter">{total.toFixed(8)}</span>
+                  </div>
+                  <span className="text-xl font-bold text-gray-500 mt-2 block">≈ ${(total * btcPrice).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
-              </div>
 
-              <div className="flex items-center justify-center py-6">
-                <div className="bg-white p-8 rounded-[48px] shadow-[0_0_80px_rgba(255,255,255,0.1)] group hover:scale-105 transition-transform duration-1000">
-                  <div className="w-56 h-56 bg-black flex items-center justify-center relative rounded-[32px] overflow-hidden">
-                    <QrCode size={180} className="text-white" />
-                    <div className="absolute inset-0 flex items-center justify-center opacity-5">
-                      <span className="text-white font-black text-6xl italic">₿</span>
+                <div className="space-y-6">
+                  <label className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-600">Store Bitcoin Address</label>
+                  <div className="flex items-center glass-ios rounded-[28px] p-4 group">
+                    <code className="flex-grow text-xs truncate mr-4 font-mono text-white/70">{btcAddress}</code>
+                    <button
+                      onClick={() => copyToClipboard(btcAddress)}
+                      className="p-4 bg-white/5 hover:bg-primary hover:text-black rounded-2xl transition-all"
+                    >
+                      <Copy size={18} />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-center py-6">
+                  <div className="bg-white p-8 rounded-[48px] shadow-[0_0_80px_rgba(255,255,255,0.1)] group hover:scale-105 transition-transform duration-1000">
+                    <div className="w-56 h-56 bg-black flex items-center justify-center relative rounded-[32px] overflow-hidden">
+                      <QrCode size={180} className="text-white" />
+                      <div className="absolute inset-0 flex items-center justify-center opacity-5">
+                        <span className="text-white font-black text-6xl italic">₿</span>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>
-          )}
 
-          {step !== 'auth' && (
-            <div className="space-y-4 px-8">
-              <div className="flex items-start space-x-6">
-                <Shield className="text-primary shrink-0 mt-1" size={28} />
-                <p className="text-xs text-gray-500 font-medium leading-relaxed uppercase tracking-widest">
-                  Secure Peer-to-Peer settlement. This invoice will expire in <span className="text-white">15:00</span>. Authenticate via your {wallet?.type} wallet or external node.
-                </p>
-              </div>
+                {step !== 'auth' && (
+                  <div className="space-y-4 px-8">
+                    <div className="flex items-start space-x-6">
+                      <Shield className="text-primary shrink-0 mt-1" size={28} />
+                      <p className="text-xs text-gray-500 font-medium leading-relaxed uppercase tracking-widest">
+                        Secure Peer-to-Peer settlement. Authenticate via your {wallet?.type} wallet or external node.
+                      </p>
+                    </div>
 
-              {/* Low Balance Warning */}
-              {wallet?.balance !== undefined && wallet.balance < (total * 100000000) && (
-                <div className="glass-ios p-6 rounded-3xl border border-red-500/20 bg-red-500/5 flex items-center justify-between">
-                  <div className="flex items-center space-x-4 text-red-400">
-                    <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center shrink-0">
-                      <span className="font-black text-lg">!</span>
-                    </div>
-                    <div>
-                      <h4 className="font-black uppercase tracking-widest text-xs mb-1">Insufficient Funds</h4>
-                      <p className="text-xs opacity-70">Balance: {wallet.balance.toLocaleString()} sats | Required: {Math.ceil(total * 100000000).toLocaleString()} sats</p>
-                    </div>
+                    {/* Low Balance Warning */}
+                    {wallet?.balance !== undefined && wallet.balance < (total * 100000000) && (
+                      <div className="glass-ios p-6 rounded-3xl border border-red-500/20 bg-red-500/5 flex items-center justify-between">
+                        <div className="flex items-center space-x-4 text-red-400">
+                          <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center shrink-0">
+                            <span className="font-black text-lg">!</span>
+                          </div>
+                          <div>
+                            <h4 className="font-black uppercase tracking-widest text-xs mb-1">Insufficient Funds</h4>
+                            <p className="text-xs opacity-70">Balance: {wallet.balance.toLocaleString()} sats | Required: {Math.ceil(total * 100000000).toLocaleString()} sats</p>
+                          </div>
+                        </div>
+                        <a
+                          href={NETWORK_CONFIG[network]?.faucetUrl || "https://faucet.midl.xyz/"}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-4 py-2 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors"
+                        >
+                          Get Tokens
+                        </a>
+                      </div>
+                    )}
                   </div>
-                  <a
-                    href={NETWORK_CONFIG[network]?.faucetUrl || "https://faucet.midl.xyz/"}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-4 py-2 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors"
-                  >
-                    Get Tokens
-                  </a>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            </>
           )}
         </div>
+
 
         {/* Verification Logic */}
         <div className="flex flex-col justify-center items-center text-center space-y-16 animate-in fade-in slide-in-from-right-8 duration-1000 delay-400">
@@ -400,7 +412,7 @@ const Checkout: React.FC = () => {
           </div>
         </div>
       </div>
-    </div>
+    </div >
   );
 };
 
