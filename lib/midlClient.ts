@@ -84,13 +84,18 @@ export class MidlClient {
     // --- Internal Helpers ---
 
     private mapToSatsConnectNetwork(network: MidlConfig['network']): BitcoinNetworkType {
+        console.log(`[Midl] Mapping network: ${network}`);
         switch (network) {
             case 'mainnet': return BitcoinNetworkType.Mainnet;
             case 'testnet': return BitcoinNetworkType.Testnet;
             case 'testnet4':
-                // CRITICAL FIX: Many Xverse versions do not yet support the explicit 'Testnet4' enum value 
-                // or treat it as generic Testnet. Forcing 'Testnet' ensures compatibility.
-                console.warn("[Midl] Mapping Testnet4 to Testnet for Xverse compatibility.");
+                // Check if the current version of sats-connect supports Testnet4 constant
+                const nt4 = (BitcoinNetworkType as any).Testnet4 || (BitcoinNetworkType as any).Testnet_4;
+                if (nt4) {
+                    console.log("[Midl] Using explicit Testnet4 network type");
+                    return nt4 as BitcoinNetworkType;
+                }
+                console.warn("[Midl] Testnet4 not found in BitcoinNetworkType constants. Falling back to Testnet.");
                 return BitcoinNetworkType.Testnet;
             case 'signet': return BitcoinNetworkType.Signet;
             case 'regtest': return BitcoinNetworkType.Regtest;
@@ -215,12 +220,27 @@ export class MidlClient {
             sendBtcTransaction({
                 payload,
                 onFinish: (response: any) => {
-                    console.log("Xverse Transaction Finished:", response);
-                    // Handle both string (legacy) and object (v2+) responses
-                    const txId = typeof response === 'string' ? response : response.txId;
-                    resolve(txId);
+                    console.log("[Midl] Xverse Transaction Response:", response);
+                    // Extremely robust txid extraction
+                    let txId = "";
+                    if (typeof response === 'string') {
+                        txId = response;
+                    } else if (response && typeof response === 'object') {
+                        txId = response.txId || response.txid || response.txHash || response.hash;
+                    }
+
+                    if (txId) {
+                        console.log("[Midl] Extracted TxID:", txId);
+                        resolve(txId);
+                    } else {
+                        console.error("[Midl] Transaction finished but no TxID found in response:", response);
+                        reject(new Error("Transaction signed but no transaction ID was returned. Check your wallet history."));
+                    }
                 },
-                onCancel: () => reject(new Error('Transaction Cancelled'))
+                onCancel: () => {
+                    console.log("[Midl] Xverse Transaction Cancelled");
+                    reject(new Error('USER_CANCELLED'));
+                }
             });
         });
     }

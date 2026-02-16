@@ -131,9 +131,17 @@ const Checkout: React.FC = () => {
         throw new Error('Transaction failed');
       }
     } catch (error: any) {
-      console.error(error);
+      console.error("Payment Step Error:", error);
       setStep('invoice');
-      setVerificationError(error.message || 'Payment failed');
+
+      let friendlyMessage = error.message || 'Payment failed';
+      if (error.message === 'USER_CANCELLED' || error.message === 'Transaction Cancelled') {
+        friendlyMessage = 'Payment was cancelled in the wallet.';
+      } else if (error.message.includes('insufficient')) {
+        friendlyMessage = 'Insufficient funds to cover transaction and dust fees.';
+      }
+
+      setVerificationError(friendlyMessage);
     }
   };
 
