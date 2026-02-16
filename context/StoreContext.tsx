@@ -121,6 +121,17 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const fetchBalance = async () => {
     if (!wallet) return;
     try {
+      // Use MIDL service for regtest network
+      if (network === 'regtest') {
+        console.log('[StoreContext] Fetching balance via MIDL service...');
+        const { midlService } = await import('../lib/midlService');
+        const balance = await midlService.getBalance(wallet.address);
+        setWallet(prev => prev ? { ...prev, balance } : null);
+        console.log('[StoreContext] Balance updated:', balance, 'sats');
+        return;
+      }
+
+      // Fallback to mempool API for other networks
       const apiBase = NETWORK_CONFIG[network]?.mempoolApi || NETWORK_CONFIG['testnet'].mempoolApi;
       const response = await fetch(`${apiBase}/address/${wallet.address}`);
       if (!response.ok) throw new Error('Failed to fetch balance');

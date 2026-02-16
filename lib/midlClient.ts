@@ -70,7 +70,39 @@ export class MidlClient {
             throw new Error("No wallet connected. Please connect a wallet first.");
         }
 
-        console.log(`[Midl] Executing payment via ${this.connectedWallet} on ${network}. Sender: ${senderAddress || 'auto'}`);
+        if (!senderAddress) {
+            throw new Error("Sender address is required for UTXO-based transactions.");
+        }
+
+        console.log(`[Midl] Executing payment via ${this.connectedWallet} on ${network}`);
+        console.log(`[Midl] Amount: ${amountSats} sats | Recipient: ${recipient} | Sender: ${senderAddress}`);
+
+        // CRITICAL: Sync wallet with blockchain before sending
+        // This ensures we have fresh UTXOs and accurate balance
+        if (network === 'regtest') {
+            console.log('[Midl] Syncing wallet with blockchain...');
+            try {
+                const { midlService } = await import('./midlService');
+                const syncResult = await midlService.syncWallet(senderAddress);
+
+                console.log('[Midl] Wallet synced successfully');
+                console.log(`[Midl] Balance: ${syncResult.balance} sats`);
+                console.log(`[Midl] Available UTXOs: ${syncResult.utxos.length}`);
+
+                // Validate sufficient balance
+                if (Number(syncResult.balance) < amountSats) {
+                    throw new Error(`Insufficient funds. Balance: ${syncResult.balance} sats, Required: ${amountSats} sats`);
+                }
+
+                // Validate UTXOs exist
+                if (syncResult.utxos.length === 0) {
+                    throw new Error('No spendable UTXOs found. Please fund your wallet first.');
+                }
+            } catch (error: any) {
+                console.error('[Midl] Wallet sync failed:', error);
+                throw new Error(`Wallet sync failed: ${error.message}`);
+            }
+        }
 
         if (this.connectedWallet === 'Xverse') {
             return this.sendXverseTransaction(amountSats, recipient, network, senderAddress);

@@ -102,6 +102,27 @@ const Checkout: React.FC = () => {
         throw new Error('Cart is empty. Please add items before checking out.');
       }
 
+      // CRITICAL: Sync wallet with blockchain before payment (especially for regtest)
+      if (network === 'regtest') {
+        console.log('[Checkout] Syncing wallet with MIDL before payment...');
+        try {
+          const { midl } = await import('../lib/midlService');
+          const walletData = await midl.syncWallet(wallet.address);
+          console.log('[Checkout] Wallet synced:', walletData);
+
+          // Check if wallet has confirmed UTXOs
+          const confirmedUtxos = walletData.utxos.filter((u: any) => u.status.confirmed);
+          if (confirmedUtxos.length === 0) {
+            throw new Error('No confirmed UTXOs available. Please wait for your previous transactions to confirm or fund your wallet from the faucet.');
+          }
+
+          console.log('[Checkout] Found', confirmedUtxos.length, 'confirmed UTXOs');
+        } catch (syncError: any) {
+          console.error('[Checkout] Wallet sync failed:', syncError);
+          throw new Error(`Wallet sync failed: ${syncError.message}`);
+        }
+      }
+
       // Execute Real Payment
       const txid = await executeBitcoinPayment(
         Math.floor(total * 100000000), // Convert to sats
