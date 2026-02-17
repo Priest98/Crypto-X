@@ -10,6 +10,8 @@
  * - Blockchain state management
  */
 
+import { Buffer } from 'buffer';
+
 const MIDL_REGTEST_API = 'https://mempool.staging.midl.xyz/api';
 
 export interface WalletSyncResult {
