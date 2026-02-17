@@ -137,20 +137,25 @@ export class MidlClient {
     private async connectXverse(network: MidlConfig['network']): Promise<MidlWalletData> {
         const tryConnect = async (netType: BitcoinNetworkType): Promise<MidlWalletData> => {
             return new Promise((resolve, reject) => {
+                const purposes = network === 'regtest'
+                    ? [AddressPurpose.Payment]
+                    : [AddressPurpose.Payment, AddressPurpose.Ordinals];
+
                 getAddress({
                     payload: {
-                        purposes: [AddressPurpose.Payment, AddressPurpose.Ordinals],
+                        purposes: purposes,
                         message: `Connect to ${network} via Midl SDK`,
                         network: { type: netType }
                     },
                     onFinish: (res) => {
                         const payment = res.addresses.find(a => a.purpose === AddressPurpose.Payment);
                         const ordinals = res.addresses.find(a => a.purpose === AddressPurpose.Ordinals);
-                        if (payment && ordinals) {
+
+                        if (payment && (ordinals || network === 'regtest')) {
                             resolve({
                                 address: payment.address,
                                 paymentAddress: payment.address,
-                                ordinalsAddress: ordinals.address,
+                                ordinalsAddress: ordinals?.address,
                                 publicKey: payment.publicKey,
                                 walletType: 'Xverse'
                             });
