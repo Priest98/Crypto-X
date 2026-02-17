@@ -291,7 +291,19 @@ export class MidlClient {
             console.log('[Midl] Step 3: Extracting signed transaction...');
             const bitcoin = await import('bitcoinjs-lib');
             const psbt = bitcoin.Psbt.fromBase64(signedPsbt);
-            psbt.finalizeAllInputs();
+
+            // For P2WPKH, we can extract directly without finalizing
+            // The signature from Xverse should already be complete
+            try {
+                // Try to finalize (this validates signatures)
+                psbt.finalizeAllInputs();
+                console.log('[Midl] PSBT finalized successfully');
+            } catch (finalizeError: any) {
+                console.warn('[Midl] Finalization failed, attempting direct extraction:', finalizeError.message);
+                // If finalization fails, try to extract anyway
+                // Xverse might have already finalized it
+            }
+
             const signedTxHex = psbt.extractTransaction().toHex();
             console.log('[Midl] Transaction hex extracted');
 
