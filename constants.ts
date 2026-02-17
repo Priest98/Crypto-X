@@ -25,7 +25,7 @@ export const NETWORK_CONFIG = {
   },
   regtest: {
     // Midl Regtest Environment
-    mempoolApi: 'https://mempool.regtest.midl.xyz/api',
+    mempoolApi: 'https://mempool.staging.midl.xyz/api',
     storeAddress: 'bcrt1q9renzw7uh4zk8wfp5hx5zk8w7p4kv4qffhq8kx', // Valid regtest address
     faucetUrl: 'https://faucet.midl.xyz/'
   }

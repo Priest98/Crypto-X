@@ -198,10 +198,10 @@ export class MidlClient {
                 chain: 'bitcoin',
                 name: 'MIDL Regtest',
                 type: 'Regtest' as any,
-                rpcUrl: 'https://mempool.regtest.midl.xyz/api',
-                rpcFallbackUrl: 'https://mempool.regtest.midl.xyz/api',
+                rpcUrl: 'https://mempool.staging.midl.xyz/api',
+                rpcFallbackUrl: 'https://mempool.staging.midl.xyz/api',
                 // Remove indexerUrl - let Xverse use default regtest indexer
-                blockExplorerUrl: 'https://mempool.regtest.midl.xyz',
+                blockExplorerUrl: 'https://mempool.staging.midl.xyz',
                 switch: true
             });
             console.log('[Midl] Successfully suggested MIDL Regtest network');

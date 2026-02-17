@@ -10,7 +10,7 @@
  * - Blockchain state management
  */
 
-const MIDL_REGTEST_API = 'https://mempool.regtest.midl.xyz/api';
+const MIDL_REGTEST_API = 'https://mempool.staging.midl.xyz/api';
 
 export interface WalletSyncResult {
     balance: number; // in satoshis
