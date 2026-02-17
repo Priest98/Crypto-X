@@ -200,11 +200,11 @@ export class MidlClient {
                 type: 'Regtest' as any,
                 rpcUrl: 'https://mempool.staging.midl.xyz/api',
                 rpcFallbackUrl: 'https://mempool.staging.midl.xyz/api',
-                // Remove indexerUrl - let Xverse use default regtest indexer
+                indexerUrl: 'https://mempool.staging.midl.xyz/api', // Force Xverse to use staging endpoint
                 blockExplorerUrl: 'https://mempool.staging.midl.xyz',
                 switch: true
             });
-            console.log('[Midl] Successfully suggested MIDL Regtest network');
+            console.log('[Midl] Successfully suggested MIDL Regtest network with staging indexer');
         } catch (error) {
             console.warn("Midl network suggestion ignored/failed:", error);
         }
