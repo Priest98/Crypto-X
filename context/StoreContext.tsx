@@ -49,29 +49,29 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   } = useWalletBalance();
 
   const [products, setProductsState] = useState<Product[]>(() => {
-    const saved = localStorage.getItem('cryptox_products_v3');
+    const saved = localStorage.getItem('velencia_products_v3');
     return saved ? JSON.parse(saved) : INITIAL_PRODUCTS;
   });
 
   const [cart, setCart] = useState<CartItem[]>(() => {
-    const saved = localStorage.getItem('cryptox_cart_v3');
+    const saved = localStorage.getItem('velencia_cart_v3');
     return saved ? JSON.parse(saved) : [];
   });
 
   const [wallet, setWallet] = useState<WalletInfo | null>(() => {
-    const saved = localStorage.getItem('cryptox_wallet');
+    const saved = localStorage.getItem('velencia_wallet');
     return saved ? JSON.parse(saved) : null;
   });
 
   const [orders, setOrders] = useState<Order[]>(() => {
-    const saved = localStorage.getItem('cryptox_orders_v3');
+    const saved = localStorage.getItem('velencia_orders_v3');
     return saved ? JSON.parse(saved) : [];
   });
 
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [btcPrice, setBtcPrice] = useState<number>(0);
   const [network, setNetwork] = useState<Network>(() => {
-    const saved = localStorage.getItem('cryptox_network');
+    const saved = localStorage.getItem('velencia_network');
     return (saved as Network) || 'testnet4';
   });
   const [isWalletModalOpen, setWalletModalOpen] = useState(false);
@@ -96,23 +96,23 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('cryptox_products_v3', JSON.stringify(products));
+    localStorage.setItem('velencia_products_v3', JSON.stringify(products));
   }, [products]);
 
   useEffect(() => {
-    localStorage.setItem('cryptox_cart_v3', JSON.stringify(cart));
+    localStorage.setItem('velencia_cart_v3', JSON.stringify(cart));
   }, [cart]);
 
   useEffect(() => {
-    localStorage.setItem('cryptox_wallet', JSON.stringify(wallet));
+    localStorage.setItem('velencia_wallet', JSON.stringify(wallet));
   }, [wallet]);
 
   useEffect(() => {
-    localStorage.setItem('cryptox_orders_v3', JSON.stringify(orders));
+    localStorage.setItem('velencia_orders_v3', JSON.stringify(orders));
   }, [orders]);
 
   useEffect(() => {
-    localStorage.setItem('cryptox_network', network);
+    localStorage.setItem('velencia_network', network);
     if (wallet) {
       fetchBalance();
     }
@@ -191,7 +191,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const disconnectWallet = useCallback(() => {
     setWallet(null);
-    localStorage.removeItem('cryptox_wallet');
+    localStorage.removeItem('velencia_wallet');
     // Also disconnect Midl client state
     import('../lib/midlClient').then(({ midlClient }) => midlClient.disconnect());
   }, []);
@@ -201,10 +201,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setCart([]);
     setOrders([]);
     // Clear all storage
-    localStorage.removeItem('cryptox_wallet');
-    localStorage.removeItem('cryptox_cart');
-    localStorage.removeItem('cryptox_orders');
-    localStorage.removeItem('cryptox_products');
+    localStorage.removeItem('velencia_wallet');
+    localStorage.removeItem('velencia_cart');
+    localStorage.removeItem('velencia_orders');
+    localStorage.removeItem('velencia_products');
 
     import('../lib/midlClient').then(({ midlClient }) => midlClient.disconnect());
     showToast('App state has been reset', 'info');

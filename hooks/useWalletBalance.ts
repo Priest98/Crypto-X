@@ -21,7 +21,7 @@ export function useWalletBalance() {
     useEffect(() => {
         const checkWallet = () => {
             try {
-                const saved = localStorage.getItem('cryptox_wallet');
+                const saved = localStorage.getItem('velencia_wallet');
                 if (saved) {
                     const walletData = JSON.parse(saved);
                     setWalletAddress(walletData.address || null);

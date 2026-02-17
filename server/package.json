@@ -1,5 +1,5 @@
 {
-    "name": "cryptox-server",
+    "name": "velencia-server",
     "version": "1.0.0",
     "description": "Bitcoin Payment Verification Backend for VELENCIA",
     "main": "index.ts",

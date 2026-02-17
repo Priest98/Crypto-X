@@ -166,7 +166,7 @@ export class MidlClient {
                     onCancel: () => reject(new Error('USER_CANCELLED')),
                     // App metadata for mobile deep linking / trust
                     app: {
-                        name: 'Crypto-X',
+                        name: 'Velencia',
                         icon: window.location.origin + '/vite.svg', // Ensure this exists or use valid URL
                     }
                 });

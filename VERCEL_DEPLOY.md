@@ -11,7 +11,7 @@ Follow these steps to deploy your application to Vercel.
 1.  **Log in to Vercel Dashboard.**
 2.  Click **"Add New..."** -> **"Project"**.
 3.  **Import Git Repository:**
-    - Correctly identify the `Crypto-X` repository.
+    - Correctly identify the `Velencia` (or `Crypto-X`) repository.
     - Click **Import**.
 
 4.  **Configure Project:**

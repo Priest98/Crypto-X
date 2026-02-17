@@ -59,7 +59,7 @@ const Home: React.FC = () => {
 
         {/* Top Label */}
         <div className="absolute top-8 z-20 animate-in fade-in slide-in-from-top-4 duration-1000">
-          <span className="text-xs font-black tracking-[0.4em] uppercase text-white/40">CryptoX Atelier</span>
+          <span className="text-xs font-black tracking-[0.4em] uppercase text-white/40">Velencia Atelier</span>
         </div>
 
         {/* Main Content - Centered */}
