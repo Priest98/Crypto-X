@@ -172,13 +172,19 @@ export async function constructPSBT(
 
         // Add inputs
         for (const utxo of selectedUtxos) {
-            const txResponse = await fetch(`${MIDL_REGTEST_API}/tx/${utxo.txid}/hex`);
-            const txHex = await txResponse.text();
+            // For SegWit addresses (bcrt1q...), we use witnessUtxo instead of nonWitnessUtxo
+            // witnessUtxo requires: script (scriptPubKey) and value
+
+            // Get the scriptPubKey for this address
+            const script = bitcoin.address.toOutputScript(senderAddress, network);
 
             psbt.addInput({
                 hash: utxo.txid,
                 index: utxo.vout,
-                nonWitnessUtxo: Buffer.from(txHex, 'hex'),
+                witnessUtxo: {
+                    script: script,
+                    value: BigInt(utxo.value),
+                },
             });
         }
 
