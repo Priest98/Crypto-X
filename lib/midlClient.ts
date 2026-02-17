@@ -213,7 +213,6 @@ export class MidlClient {
                 type: 'Regtest' as any,
                 rpcUrl: 'https://mempool.staging.midl.xyz/api',
                 rpcFallbackUrl: 'https://mempool.staging.midl.xyz/api',
-                indexerUrl: 'https://mempool.staging.midl.xyz/api', // Force Xverse to use staging endpoint
                 blockExplorerUrl: 'https://mempool.staging.midl.xyz',
                 switch: true
             });
