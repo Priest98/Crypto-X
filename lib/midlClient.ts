@@ -171,7 +171,15 @@ export class MidlClient {
         const btcNetwork = this.mapToSatsConnectNetwork(network);
 
         if (network === 'regtest') {
-            try { await this.suggestMidlNetwork(); } catch (e) { /* ignore */ }
+            try {
+                await this.suggestMidlNetwork();
+                // CRITICAL: Wait for Xverse to fetch balance from staging endpoint
+                console.log('[Midl] Waiting for Xverse to sync balance from staging endpoint...');
+                await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second delay
+                console.log('[Midl] Network configured, Xverse should now have balance');
+            } catch (e) {
+                console.warn('[Midl] Network suggestion failed:', e);
+            }
         }
 
         try {
