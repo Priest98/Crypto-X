@@ -120,6 +120,89 @@ export async function fetchTransactions(address: string): Promise<Transaction[]>
 }
 
 /**
+ * Construct a PSBT (Partially Signed Bitcoin Transaction) for Xverse to sign
+ */
+export async function constructPSBT(
+    senderAddress: string,
+    recipientAddress: string,
+    amountSats: number
+): Promise<string> {
+    console.log('[MIDL Service] Constructing PSBT...');
+    console.log('[MIDL Service] Sender:', senderAddress);
+    console.log('[MIDL Service] Recipient:', recipientAddress);
+    console.log('[MIDL Service] Amount:', amountSats, 'sats');
+
+    try {
+        const bitcoin = await import('bitcoinjs-lib');
+        const network = bitcoin.networks.regtest;
+
+        // Fetch UTXOs
+        const utxos = await fetchUtxos(senderAddress);
+        console.log('[MIDL Service] Available UTXOs:', utxos.length);
+
+        if (utxos.length === 0) {
+            throw new Error('No UTXOs available');
+        }
+
+        // Estimate fee: 1 sat/vbyte * ~180 vbytes
+        const estimatedFee = 200; // sats
+        const totalNeeded = amountSats + estimatedFee;
+
+        // Select UTXOs
+        let selectedUtxos: UTXO[] = [];
+        let totalInput = 0;
+
+        for (const utxo of utxos) {
+            selectedUtxos.push(utxo);
+            totalInput += utxo.value;
+            if (totalInput >= totalNeeded) break;
+        }
+
+        if (totalInput < totalNeeded) {
+            throw new Error(`Insufficient funds. Have: ${totalInput}, Need: ${totalNeeded}`);
+        }
+
+        const change = totalInput - amountSats - estimatedFee;
+        console.log('[MIDL Service] Selected', selectedUtxos.length, 'UTXOs, Change:', change);
+
+        // Create PSBT
+        const psbt = new bitcoin.Psbt({ network });
+
+        // Add inputs
+        for (const utxo of selectedUtxos) {
+            const txResponse = await fetch(`${MIDL_REGTEST_API}/tx/${utxo.txid}/hex`);
+            const txHex = await txResponse.text();
+
+            psbt.addInput({
+                hash: utxo.txid,
+                index: utxo.vout,
+                nonWitnessUtxo: Buffer.from(txHex, 'hex'),
+            });
+        }
+
+        // Add recipient output
+        psbt.addOutput({
+            address: recipientAddress,
+            value: BigInt(amountSats),
+        });
+
+        // Add change output if > dust
+        if (change > 1000) {
+            psbt.addOutput({
+                address: senderAddress,
+                value: BigInt(change),
+            });
+        }
+
+        console.log('[MIDL Service] PSBT constructed successfully');
+        return psbt.toBase64();
+    } catch (error) {
+        console.error('[MIDL Service] PSBT construction failed:', error);
+        throw error;
+    }
+}
+
+/**
  * Broadcast a signed transaction to the network
  */
 export async function broadcastTransaction(signedTxHex: string): Promise<string> {
@@ -194,6 +277,7 @@ export const midl = {
     fetchUtxos,
     fetchTransactions,
     broadcastTransaction,
+    constructPSBT,
 };
 
 /**
@@ -206,4 +290,5 @@ export const midlService = {
     broadcastTransaction,
     getBalance,
     getUtxos,
+    constructPSBT,
 };

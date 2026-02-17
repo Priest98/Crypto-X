@@ -244,49 +244,67 @@ export class MidlClient {
     }
 
     private async sendXverseTransaction(amount: number, recipient: string, network: MidlConfig['network'], senderAddress?: string): Promise<string> {
-        return new Promise((resolve, reject) => {
-            const btcNetwork = this.mapToSatsConnectNetwork(network);
-            console.log(`[Midl] Xverse Payload - Net: ${btcNetwork}, Amt: ${amount}, Recip: ${recipient}`);
+        if (!senderAddress) {
+            throw new Error('Sender address is required for PSBT construction');
+        }
 
-            const payload = {
-                network: { type: btcNetwork },
-                recipients: [{
-                    address: recipient,
-                    amountSats: BigInt(Math.floor(amount))
-                }],
-                senderAddress: senderAddress || undefined
-            };
+        const btcNetwork = this.mapToSatsConnectNetwork(network);
+        console.log(`[Midl] Using new sign-then-broadcast flow`);
+        console.log(`[Midl] Network: ${btcNetwork}, Amount: ${amount}, Recipient: ${recipient}`);
 
-            try {
-                sendBtcTransaction({
-                    payload,
+        try {
+            // Step 1: Construct PSBT using our MIDL service
+            console.log('[Midl] Step 1: Constructing PSBT...');
+            const { midlService } = await import('./midlService');
+            const psbtBase64 = await midlService.constructPSBT(senderAddress, recipient, amount);
+            console.log('[Midl] PSBT constructed successfully');
+
+            // Step 2: Have Xverse sign the PSBT (but NOT broadcast)
+            console.log('[Midl] Step 2: Requesting Xverse signature...');
+            const { signTransaction } = await import('sats-connect');
+
+            const signedPsbt = await new Promise<string>((resolve, reject) => {
+                signTransaction({
+                    payload: {
+                        network: { type: btcNetwork },
+                        message: `Sign payment of ${amount} sats to ${recipient}`,
+                        psbtBase64,
+                        broadcast: false, // DON'T let Xverse broadcast
+                        inputsToSign: [{
+                            address: senderAddress,
+                            signingIndexes: [0], // Sign first input (we can have multiple inputs)
+                        }],
+                    },
                     onFinish: (response: any) => {
-                        console.log("[Midl] Xverse Transaction Response:", response);
-                        // Extremely robust txid extraction
-                        let txId = "";
-                        if (typeof response === 'string') {
-                            txId = response;
-                        } else if (response && typeof response === 'object') {
-                            txId = response.txId || response.txid || response.txHash || response.hash;
-                        }
-
-                        if (txId) {
-                            console.log("[Midl] Extracted TxID:", txId);
-                            resolve(txId);
-                        } else {
-                            console.error("[Midl] Transaction finished but no TxID found in response:", response);
-                            reject(new Error("Transaction signed but no transaction ID was returned. Check your wallet history."));
-                        }
+                        console.log('[Midl] Xverse signature received');
+                        const signed = response.psbtBase64 || response.psbt || response;
+                        resolve(signed);
                     },
                     onCancel: () => {
-                        console.log("[Midl] Xverse Transaction Cancelled");
+                        console.log('[Midl] Xverse signature cancelled');
                         reject(new Error('USER_CANCELLED'));
-                    }
+                    },
                 });
-            } catch (e: any) {
-                reject(e);
-            }
-        });
+            });
+
+            // Step 3: Extract the signed transaction hex from PSBT
+            console.log('[Midl] Step 3: Extracting signed transaction...');
+            const bitcoin = await import('bitcoinjs-lib');
+            const psbt = bitcoin.Psbt.fromBase64(signedPsbt);
+            psbt.finalizeAllInputs();
+            const signedTxHex = psbt.extractTransaction().toHex();
+            console.log('[Midl] Transaction hex extracted');
+
+            // Step 4: Broadcast ourselves to staging endpoint
+            console.log('[Midl] Step 4: Broadcasting to staging endpoint...');
+            const txid = await midlService.broadcastTransaction(signedTxHex);
+            console.log('[Midl] Transaction broadcasted successfully:', txid);
+
+            return txid;
+        } catch (error: any) {
+            console.error('[Midl] Transaction failed:', error);
+            throw error;
+        }
     }
 
     async signMessage(message: string, network?: MidlConfig['network'], walletType?: 'Xverse' | 'UniSat', address?: string): Promise<string> {
