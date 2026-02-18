@@ -215,9 +215,10 @@ export class MidlClient {
             await request('wallet_addNetwork', {
                 chain: 'bitcoin',
                 name: 'MIDL Regtest',
-                type: 'Regtest' as any,
+                type: BitcoinNetworkType.Regtest,
                 rpcUrl: 'https://mempool.staging.midl.xyz/api',
                 rpcFallbackUrl: 'https://mempool.staging.midl.xyz/api',
+                indexerUrl: 'https://mempool.staging.midl.xyz/api',
                 blockExplorerUrl: 'https://mempool.staging.midl.xyz',
                 switch: true
             });
