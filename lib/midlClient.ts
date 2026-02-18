@@ -204,6 +204,11 @@ export class MidlClient {
         }
     }
 
+    async setupRegtest(): Promise<void> {
+        console.log('[Midl] Setting up Regtest network...');
+        await this.suggestMidlNetwork();
+    }
+
     private async suggestMidlNetwork() {
         const { request } = await import('sats-connect');
         try {
@@ -219,6 +224,7 @@ export class MidlClient {
             console.log('[Midl] Successfully suggested MIDL Regtest network with staging indexer');
         } catch (error) {
             console.warn("Midl network suggestion ignored/failed:", error);
+            throw error; // Re-throw to let UI know
         }
     }
 
@@ -321,61 +327,6 @@ export class MidlClient {
             console.error('[Midl] Transaction failed:', error);
             throw error;
         }
-    }
-
-    async signMessage(message: string, network?: MidlConfig['network'], walletType?: 'Xverse' | 'UniSat', address?: string): Promise<string> {
-        if (walletType) this.connectedWallet = walletType;
-        if (network) this.activeNetwork = network;
-
-        if (!this.connectedWallet) throw new Error("Wallet not connected");
-
-        if (this.connectedWallet === 'Xverse') {
-            return this.signMessageXverse(message, address);
-        } else if (this.connectedWallet === 'UniSat') {
-            // Pass address if UniSat supports it in future, currently just message
-            return this.signMessageUniSat(message);
-        }
-        throw new Error("Unknown wallet type");
-    }
-
-    private async signMessageXverse(message: string, address?: string): Promise<string> {
-        const trySign = async (netType: BitcoinNetworkType): Promise<string> => {
-            return new Promise((resolve, reject) => {
-                import('sats-connect').then(({ signMessage }) => {
-                    signMessage({
-                        payload: {
-                            network: { type: netType },
-                            address: address || '',
-                            message
-                        },
-                        onFinish: (response: any) => {
-                            // sats-connect may return just the signature string or an object
-                            const signature = typeof response === 'string' ? response : (response.signature || response);
-                            resolve(signature);
-                        },
-                        onCancel: () => reject(new Error("USER_CANCELLED"))
-                    });
-                }).catch(reject);
-            });
-        };
-
-        // Use activeNetwork instead of static config
-        const btcNetwork = this.mapToSatsConnectNetwork(this.activeNetwork);
-
-        try {
-            return await trySign(btcNetwork);
-        } catch (error: any) {
-            if (error.message !== 'USER_CANCELLED' && btcNetwork !== BitcoinNetworkType.Testnet) {
-                console.warn(`[Midl] Signing with ${btcNetwork} failed. Retrying with Testnet fallback...`);
-                return await trySign(BitcoinNetworkType.Testnet);
-            }
-            throw error;
-        }
-    }
-
-    private async signMessageUniSat(message: string): Promise<string> {
-        if (typeof (window as any).unisat === 'undefined') throw new Error('UniSat not installed');
-        return await (window as any).unisat.signMessage(message);
     }
 
     private async sendUniSatTransaction(amount: number, recipient: string, network: MidlConfig['network']): Promise<string> {

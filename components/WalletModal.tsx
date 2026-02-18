@@ -165,9 +165,35 @@ const WalletModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpe
                       <span>Get Xverse</span>
                     </a>
                   </div>
+
+                  {/* Dev / Test Helper */}
+                  <div className="pt-2 w-full">
+                    <button
+                      onClick={async () => {
+                        try {
+                          // Switch app network first
+                          useStore().setNetwork('regtest');
+                          // Call MIDL setup
+                          const { midlClient } = await import('../lib/midlClient');
+                          await midlClient.setupRegtest();
+                          alert("Network suggested! Please approve in Xverse.");
+                        } catch (e) {
+                          console.error(e);
+                          alert("Setup failed. See console.");
+                        }
+                      }}
+                      className="w-full py-3 rounded-xl bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20 font-bold text-xs uppercase tracking-widest transition-colors flex items-center justify-center space-x-2"
+                    >
+                      <Zap size={14} />
+                      <span>⚡ Setup Test Network</span>
+                    </button>
+                    <p className="text-[10px] text-gray-600 text-center mt-2">
+                      Adds MIDL Regtest RPC to Xverse
+                    </p>
+                  </div>
                 </div>
 
-                <div className="pt-12 flex flex-col items-center space-y-4">
+                <div className="pt-8 flex flex-col items-center space-y-4">
                   <button
                     onClick={() => {
                       if (confirm("Reset wallet connection and app state?")) {
