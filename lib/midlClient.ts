@@ -280,6 +280,8 @@ export class MidlClient {
 
         const btcNetwork = this.mapToSatsConnectNetwork(network);
         console.log(`[Midl] Using new sign-then-broadcast flow`);
+        // DEBUG: Alert to confirm we reached here
+        alert(`Midl Debug: Starting Transaction Flow\nAmount: ${amount}\nRecipient: ${recipient}`);
         console.log(`[Midl] Network: ${btcNetwork}, Amount: ${amount}, Recipient: ${recipient}`);
 
         try {

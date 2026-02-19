@@ -10,6 +10,8 @@ export const usePayment = () => {
     const [isProcessing, setIsProcessing] = useState(false);
     const [verificationStatus, setVerificationStatus] = useState<'idle' | 'pending' | 'confirmed' | 'failed'>('idle');
     const [confirmations, setConfirmations] = useState(0);
+    const [evmTxId, setEvmTxId] = useState<string | null>(null);
+    const [evmStatus, setEvmStatus] = useState<'idle' | 'pending' | 'confirmed' | 'failed'>('idle');
     const [error, setError] = useState<string | null>(null);
 
     const connect = async (type: 'Xverse' | 'UniSat') => {
@@ -39,6 +41,7 @@ export const usePayment = () => {
             const senderAddress = wallet?.paymentAddress || wallet?.address;
 
             console.log(`[usePayment] Initiating payment. Network: ${network}, Wallet: ${walletType}, Sender: ${senderAddress}`);
+            alert(`Debug [usePayment]: Initiating payment\nAmount: ${amountSats}\nSender: ${senderAddress}`);
 
             const tx = await executeBitcoinPayment(amountSats, toAddress, network, walletType, senderAddress);
             console.log('Midl TX ID:', tx);
@@ -46,7 +49,20 @@ export const usePayment = () => {
             if (tx) {
                 setTxId(tx);
 
-                // 2. Store Payment Intent on Backend
+                // 2. Trigger EVM Action (Independent Layer)
+                let evmHash = null;
+                try {
+                    const { executeEVMAction } = await import('../lib/evmClient');
+                    console.log('[usePayment] Triggering EVM action...');
+                    evmHash = await executeEVMAction(tx);
+                    setEvmTxId(evmHash);
+                    setEvmStatus('pending');
+                } catch (evmErr) {
+                    console.error('[usePayment] EVM Action failed:', evmErr);
+                    setEvmStatus('failed');
+                }
+
+                // 3. Store Payment Intent on Backend
                 await fetch('http://localhost:3001/api/payments/store', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -55,7 +71,8 @@ export const usePayment = () => {
                         amount: amountSats,
                         txid: tx,
                         orderId,
-                        network
+                        network,
+                        evmTxHash: evmHash
                     }),
                 });
 
@@ -85,6 +102,20 @@ export const usePayment = () => {
                     setConfirmations(data.confirmations || 0);
                     if (data.status === 'confirmed') {
                         setVerificationStatus('confirmed');
+                        // Don't stop polling yet if EVM is still pending, or just assume EVM is fast.
+                        // For now, let's keep it simple: if BTC is confirmed, we consider payment done, 
+                        // but we might want to update EVM status too.
+
+                        if (evmTxId) {
+                            try {
+                                const evmRes = await fetch(`http://localhost:3001/api/payments/evm/verify/${evmTxId}`);
+                                const evmData = await evmRes.json();
+                                if (evmData.status === 'confirmed') {
+                                    setEvmStatus('confirmed');
+                                }
+                            } catch (e) { console.error("EVM verify failed", e); }
+                        }
+
                         setIsProcessing(false);
                         clearInterval(poll);
                     }
@@ -104,5 +135,5 @@ export const usePayment = () => {
         }, 600000);
     };
 
-    return { wallet, connect, pay, txId, isProcessing, verificationStatus, confirmations, error };
+    return { wallet, connect, pay, txId, evmTxId, evmStatus, isProcessing, verificationStatus, confirmations, error };
 };
