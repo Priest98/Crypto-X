@@ -307,11 +307,23 @@ export class MidlClient {
             const signingIndexes = tempPsbt.txInputs.map((_, i) => i);
 
             // STEP 3
-            alert(`Debug 3/5: Requesting Xverse Signature.\nSigning Indexes: ${signingIndexes.join(',')}`);
+            console.log(`[Midl] Requesting Xverse Signature. Signing Indexes: ${signingIndexes.join(',')}`);
 
             let signedPsbt: string;
             try {
                 signedPsbt = await new Promise<string>((resolve, reject) => {
+                    let hasFinished = false;
+
+                    // Add timeout to prevent hanging forever
+                    const timeoutId = setTimeout(() => {
+                        if (!hasFinished) {
+                            console.error('Xverse signing timed out');
+                            // Keep this alert for timeout as it's a critical user-actionable error
+                            alert('Signing Timed Out! Please check if Xverse popup is open.');
+                            reject(new Error('SIGNING_TIMEOUT: Xverse did not respond in 30s'));
+                        }
+                    }, 30000);
+
                     signTransaction({
                         payload: {
                             network: {
@@ -326,8 +338,10 @@ export class MidlClient {
                             }],
                         },
                         onFinish: (response: any) => {
-                            // STEP 4 - Success
-                            alert('Debug 4/5: Xverse Signed Successfully!');
+                            hasFinished = true;
+                            clearTimeout(timeoutId);
+                            console.log('[Midl] Xverse signature received', response);
+                            // Handle potential response structures
                             const signed = response.psbtBase64 || response.psbt || response;
                             if (!signed) {
                                 reject(new Error('No signed PSBT returned from Xverse'));
@@ -336,16 +350,17 @@ export class MidlClient {
                             resolve(signed);
                         },
                         onCancel: () => {
-                            alert('Debug: Xverse Cancelled by User');
+                            hasFinished = true;
+                            clearTimeout(timeoutId);
+                            console.log('[Midl] Xverse signature cancelled');
                             reject(new Error('USER_CANCELLED'));
                         },
                     });
                 });
             } catch (signError: any) {
-                if (signError.message !== 'USER_CANCELLED') {
-                    alert(`Debug ERROR at Signing: ${signError.message}`);
-                }
-                throw signError;
+                if (signError.message === 'USER_CANCELLED') throw signError;
+                console.error('[Midl] Signing Failed:', signError);
+                throw new Error(`Wallet signing failed: ${signError.message}`);
             }
 
             // Step 3: Extract and Broadcast
@@ -359,23 +374,21 @@ export class MidlClient {
 
             const signedTxHex = psbt.extractTransaction().toHex();
 
-            // STEP 5
-            alert('Debug 5/5: Broadcasting to Network...');
+            // Step 5: Broadcast
+            console.log('[Midl] Broadcasting to Network...');
 
             try {
                 const txid = await midlService.broadcastTransaction(signedTxHex, network);
-                alert(`Debug SUCCESS! TxID: ${txid}`);
+                console.log(`[Midl] Broadcast Success! TxID: ${txid}`);
                 return txid;
             } catch (broadcastError: any) {
-                alert(`Debug ERROR at Broadcast: ${broadcastError.message}`);
+                console.error(`[Midl] Broadcast Error: ${broadcastError.message}`);
                 throw broadcastError;
             }
 
         } catch (error: any) {
             console.error('[Midl] Transaction Flow Error:', error);
-            if (!error.message.includes('Debug ERROR')) {
-                alert(`Debug FATAL Error: ${error.message}`);
-            }
+
             throw error;
         }
     }

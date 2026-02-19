@@ -41,7 +41,6 @@ export const usePayment = () => {
             const senderAddress = wallet?.paymentAddress || wallet?.address;
 
             console.log(`[usePayment] Initiating payment. Network: ${network}, Wallet: ${walletType}, Sender: ${senderAddress}`);
-            alert(`Debug [usePayment]: Initiating payment\nAmount: ${amountSats}\nSender: ${senderAddress}`);
 
             const tx = await executeBitcoinPayment(amountSats, toAddress, network, walletType, senderAddress);
             console.log('Midl TX ID:', tx);
