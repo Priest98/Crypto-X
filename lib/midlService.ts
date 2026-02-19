@@ -11,8 +11,7 @@
  */
 
 import { Buffer } from 'buffer';
-
-const MIDL_REGTEST_API = 'https://mempool.staging.midl.xyz/api';
+import { NETWORK_CONFIG } from '../constants';
 
 export interface WalletSyncResult {
     balance: number; // in satoshis
@@ -45,15 +44,15 @@ export interface Transaction {
  * Sync wallet state with blockchain
  * Fetches balance, UTXOs, and transaction history
  */
-export async function syncWallet(address: string): Promise<WalletSyncResult> {
-    console.log('[MIDL Service] Syncing wallet:', address);
+export async function syncWallet(address: string, network: string = 'regtest'): Promise<WalletSyncResult> {
+    console.log('[MIDL Service] Syncing wallet:', address, 'on', network);
 
     try {
         // Fetch all data in parallel for performance
         const [balance, utxos, transactions] = await Promise.all([
-            getBalance(address),
-            fetchUtxos(address),
-            fetchTransactions(address)
+            getBalance(address, network),
+            fetchUtxos(address, network),
+            fetchTransactions(address, network)
         ]);
 
         console.log('[MIDL Service] Wallet synced - Balance:', balance, 'UTXOs:', utxos.length, 'Txs:', transactions.length);
@@ -72,12 +71,13 @@ export async function syncWallet(address: string): Promise<WalletSyncResult> {
 /**
  * Fetch spendable UTXOs for an address
  */
-export async function fetchUtxos(address: string): Promise<UTXO[]> {
+export async function fetchUtxos(address: string, network: string = 'regtest'): Promise<UTXO[]> {
+    const apiBase = NETWORK_CONFIG[network as keyof typeof NETWORK_CONFIG].mempoolApi;
     console.log('[MIDL Service] Fetching UTXOs for:', address);
-    console.log('[MIDL Service] API endpoint:', `${MIDL_REGTEST_API}/address/${address}/utxo`);
+    console.log('[MIDL Service] API endpoint:', `${apiBase}/address/${address}/utxo`);
 
     try {
-        const response = await fetch(`${MIDL_REGTEST_API}/address/${address}/utxo`);
+        const response = await fetch(`${apiBase}/address/${address}/utxo`);
 
         console.log('[MIDL Service] UTXO fetch response status:', response.status, response.statusText);
 
@@ -101,11 +101,12 @@ export async function fetchUtxos(address: string): Promise<UTXO[]> {
 /**
  * Fetch transaction history for an address
  */
-export async function fetchTransactions(address: string): Promise<Transaction[]> {
+export async function fetchTransactions(address: string, network: string = 'regtest'): Promise<Transaction[]> {
+    const apiBase = NETWORK_CONFIG[network as keyof typeof NETWORK_CONFIG].mempoolApi;
     console.log('[MIDL Service] Fetching transactions for:', address);
 
     try {
-        const response = await fetch(`${MIDL_REGTEST_API}/address/${address}/txs`);
+        const response = await fetch(`${apiBase}/address/${address}/txs`);
 
         if (!response.ok) {
             throw new Error(`Failed to fetch transactions: ${response.statusText}`);
@@ -127,7 +128,8 @@ export async function fetchTransactions(address: string): Promise<Transaction[]>
 export async function constructPSBT(
     senderAddress: string,
     recipientAddress: string,
-    amountSats: number
+    amountSats: number,
+    networkName: string = 'regtest'
 ): Promise<string> {
     console.log('[MIDL Service] Constructing PSBT...');
     console.log('[MIDL Service] Sender:', senderAddress);
@@ -136,10 +138,14 @@ export async function constructPSBT(
 
     try {
         const bitcoin = await import('bitcoinjs-lib');
+        // CRITICAL: We use Testnet network here because we are using tb1 addresses (Testnet format)
+        // to spoof Xverse. The resulting scriptPubKey (00 14 <hash>) is identical to Regtest
+        // so it remains valid on the Regtest chain.
+        // We use Regtest network now as Xverse is correctly configured for Regtest
         const network = bitcoin.networks.regtest;
 
         // Fetch UTXOs
-        const utxos = await fetchUtxos(senderAddress);
+        const utxos = await fetchUtxos(senderAddress, networkName);
         console.log('[MIDL Service] Available UTXOs:', utxos.length);
 
         if (utxos.length === 0) {
@@ -185,6 +191,7 @@ export async function constructPSBT(
                     script: script,
                     value: BigInt(utxo.value),
                 },
+                sighashType: 1, // SIGHASH_ALL
             });
         }
 
@@ -213,11 +220,12 @@ export async function constructPSBT(
 /**
  * Broadcast a signed transaction to the network
  */
-export async function broadcastTransaction(signedTxHex: string): Promise<string> {
+export async function broadcastTransaction(signedTxHex: string, network: string = 'regtest'): Promise<string> {
+    const apiBase = NETWORK_CONFIG[network as keyof typeof NETWORK_CONFIG].mempoolApi;
     console.log('[MIDL Service] Broadcasting transaction...');
 
     try {
-        const response = await fetch(`${MIDL_REGTEST_API}/tx`, {
+        const response = await fetch(`${apiBase}/tx`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'text/plain',
@@ -243,11 +251,12 @@ export async function broadcastTransaction(signedTxHex: string): Promise<string>
 /**
  * Get current balance for an address (in satoshis)
  */
-export async function getBalance(address: string): Promise<number> {
+export async function getBalance(address: string, network: string = 'regtest'): Promise<number> {
+    const apiBase = NETWORK_CONFIG[network as keyof typeof NETWORK_CONFIG].mempoolApi;
     console.log('[MIDL Service] Fetching balance for:', address);
 
     try {
-        const response = await fetch(`${MIDL_REGTEST_API}/address/${address}`);
+        const response = await fetch(`${apiBase}/address/${address}`);
 
         if (!response.ok) {
             throw new Error(`Failed to fetch balance: ${response.statusText}`);

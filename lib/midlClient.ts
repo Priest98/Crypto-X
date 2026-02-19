@@ -335,6 +335,7 @@ export class MidlClient {
                             inputsToSign: [{
                                 address: senderAddress,
                                 signingIndexes: signingIndexes,
+                                sigHash: 1, // SIGHASH_ALL
                             }],
                         },
                         onFinish: (response: any) => {
