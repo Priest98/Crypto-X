@@ -279,33 +279,35 @@ export class MidlClient {
         }
 
         const btcNetwork = this.mapToSatsConnectNetwork(network);
-        console.log(`[Midl] Using new sign-then-broadcast flow`);
-        // DEBUG: Alert to confirm we reached here
-        alert(`Midl Debug: Starting Transaction Flow\nAmount: ${amount}\nRecipient: ${recipient}`);
-        console.log(`[Midl] Network: ${btcNetwork}, Amount: ${amount}, Recipient: ${recipient}`);
+        // STEP 0
+        alert(`Debug 0/5: Starting Payment\nAmount: ${amount}\nRecipient: ${recipient}`);
 
         try {
-            // Step 1: Construct PSBT using our MIDL service
-            console.log('[Midl] Step 1: Constructing PSBT...');
+            // Step 1: Construct PSBT
             const { midlService } = await import('./midlService');
+            // STEP 1
+            alert('Debug 1/5: MidlService Imported. Constructing PSBT next...');
+
             let psbtBase64: string;
             try {
                 psbtBase64 = await midlService.constructPSBT(senderAddress, recipient, amount, network);
-                console.log('[Midl] PSBT constructed successfully');
+                // STEP 2
+                alert('Debug 2/5: PSBT Constructed Successfully!');
             } catch (psbtError: any) {
-                console.error('[Midl] PSBT Construction Failed:', psbtError);
-                throw new Error(`Failed to construct transaction: ${psbtError.message}`);
+                alert(`Debug ERROR at PSBT: ${psbtError.message}`);
+                throw psbtError;
             }
 
-            // Step 2: Have Xverse sign the PSBT (but NOT broadcast)
-            console.log('[Midl] Step 2: Requesting Xverse signature via signTransaction...');
+            // Step 2: Have Xverse sign
             const { signTransaction } = await import('sats-connect');
 
-            // Determine signing indexes (all inputs should be signed by sender)
+            // Determine signing indexes
             const bitcoin = await import('bitcoinjs-lib');
             const tempPsbt = bitcoin.Psbt.fromBase64(psbtBase64);
             const signingIndexes = tempPsbt.txInputs.map((_, i) => i);
-            console.log('[Midl] Signing indexes:', signingIndexes);
+
+            // STEP 3
+            alert(`Debug 3/5: Requesting Xverse Signature.\nSigning Indexes: ${signingIndexes.join(',')}`);
 
             let signedPsbt: string;
             try {
@@ -324,8 +326,8 @@ export class MidlClient {
                             }],
                         },
                         onFinish: (response: any) => {
-                            console.log('[Midl] Xverse signature received', response);
-                            // Handle potential response structures
+                            // STEP 4 - Success
+                            alert('Debug 4/5: Xverse Signed Successfully!');
                             const signed = response.psbtBase64 || response.psbt || response;
                             if (!signed) {
                                 reject(new Error('No signed PSBT returned from Xverse'));
@@ -334,56 +336,46 @@ export class MidlClient {
                             resolve(signed);
                         },
                         onCancel: () => {
-                            console.log('[Midl] Xverse signature cancelled');
+                            alert('Debug: Xverse Cancelled by User');
                             reject(new Error('USER_CANCELLED'));
                         },
                     });
                 });
             } catch (signError: any) {
-                if (signError.message === 'USER_CANCELLED') throw signError;
-                console.error('[Midl] Signing Failed:', signError);
-                throw new Error(`Wallet signing failed: ${signError.message}`);
-            }
-
-            // Step 3: Extract the signed transaction hex from PSBT
-            console.log('[Midl] Step 3: Extracting signed transaction...');
-            let signedTxHex: string;
-            try {
-                // bitcoin is already imported above
-                const psbt = bitcoin.Psbt.fromBase64(signedPsbt);
-
-                // For P2WPKH, we can extract directly without finalizing
-                // The signature from Xverse should usually be complete
-                try {
-                    // Try to finalize (this validates signatures)
-                    psbt.finalizeAllInputs();
-                    console.log('[Midl] PSBT finalized successfully');
-                } catch (finalizeError: any) {
-                    console.warn('[Midl] Finalization warning (attempting direct extraction):', finalizeError.message);
-                    // If finalization fails, try to extract anyway
-                    // Xverse might have already finalized it or we might need to handle partial sigs
+                if (signError.message !== 'USER_CANCELLED') {
+                    alert(`Debug ERROR at Signing: ${signError.message}`);
                 }
-
-                signedTxHex = psbt.extractTransaction().toHex();
-                console.log('[Midl] Transaction hex extracted length:', signedTxHex.length);
-            } catch (extractError: any) {
-                console.error('[Midl] Extraction Failed:', extractError);
-                throw new Error(`Failed to extract signed transaction: ${extractError.message}`);
+                throw signError;
             }
 
-            // Step 4: Broadcast ourselves to staging endpoint
-            console.log('[Midl] Step 4: Broadcasting to staging endpoint...');
+            // Step 3: Extract and Broadcast
+            const psbt = bitcoin.Psbt.fromBase64(signedPsbt);
+
+            try {
+                psbt.finalizeAllInputs();
+            } catch (finalizeError: any) {
+                console.warn('Finalization failed, attempting direct extraction:', finalizeError.message);
+            }
+
+            const signedTxHex = psbt.extractTransaction().toHex();
+
+            // STEP 5
+            alert('Debug 5/5: Broadcasting to Network...');
+
             try {
                 const txid = await midlService.broadcastTransaction(signedTxHex, network);
-                console.log('[Midl] Transaction broadcasted successfully:', txid);
+                alert(`Debug SUCCESS! TxID: ${txid}`);
                 return txid;
             } catch (broadcastError: any) {
-                console.error('[Midl] Broadcast Failed:', broadcastError);
-                throw new Error(`Broadcast failed: ${broadcastError.message}`);
+                alert(`Debug ERROR at Broadcast: ${broadcastError.message}`);
+                throw broadcastError;
             }
 
         } catch (error: any) {
             console.error('[Midl] Transaction Flow Error:', error);
+            if (!error.message.includes('Debug ERROR')) {
+                alert(`Debug FATAL Error: ${error.message}`);
+            }
             throw error;
         }
     }
