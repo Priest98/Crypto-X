@@ -10,7 +10,7 @@ import WalletAuth from '../components/WalletAuth';
 import InvoiceTimer from '../components/InvoiceTimer';
 
 const Checkout: React.FC = () => {
-  const { cart, wallet, clearCart, createOrder, btcPrice, network, refreshBalance } = useStore();
+  const { cart, wallet, clearCart, createOrder, btcPrice, network, refreshBalance, processPayment } = useStore();
   const navigate = useNavigate();
 
   const [step, setStep] = useState<'auth' | 'invoice' | 'verifying' | 'success'>('auth');
@@ -21,6 +21,7 @@ const Checkout: React.FC = () => {
   const [manualTxId, setManualTxId] = useState('');
   const [verificationError, setVerificationError] = useState<string | null>(null);
   const [confirmedTxId, setConfirmedTxId] = useState<string | null>(null);
+  const [evmTxHash, setEvmTxHash] = useState<string | null>(null);
 
   const subtotal = cart.reduce((acc, item) => acc + (item.price_btc * item.quantity), 0);
   const total = subtotal + 0.00005;
@@ -72,7 +73,7 @@ const Checkout: React.FC = () => {
     }
   };
 
-  const completeSettlement = (txid: string) => {
+  const completeSettlement = (txid: string, evmHash?: string) => {
     const newOrder = {
       id: invoiceId,
       wallet_address: wallet?.address || 'unknown',
@@ -80,10 +81,13 @@ const Checkout: React.FC = () => {
       total_btc: total,
       status: OrderStatus.CONFIRMED,
       transaction_hash: txid,
+      evm_tx_hash: evmHash,
+      evm_status: evmHash ? 'confirmed' : undefined as any,
       created_at: new Date().toISOString()
     };
     createOrder(newOrder);
     setConfirmedTxId(txid);
+    setEvmTxHash(evmHash || null);
     setStep('success');
     clearCart();
 
@@ -101,70 +105,30 @@ const Checkout: React.FC = () => {
     setVerificationError(null);
 
     try {
-
       if (total <= 0) {
         throw new Error('Cart is empty. Please add items before checking out.');
       }
 
-      // CRITICAL: Sync wallet with blockchain before payment (especially for regtest)
-      if (network === 'regtest') {
-        console.log('[Checkout] Syncing wallet with MIDL before payment...');
-        try {
-          const { midl } = await import('../lib/midlService');
-          const walletData = await midl.syncWallet(wallet.address);
-          console.log('[Checkout] Wallet synced:', walletData);
+      const totalSats = Math.floor(total * 100_000_000);
 
-          // Check if wallet has any UTXOs (allow unconfirmed for regtest)
-          if (walletData.utxos.length === 0) {
-            throw new Error('No UTXOs available. Please fund your wallet from https://faucet.midl.xyz/');
-          }
+      // Use the context-provided processPayment which handles:
+      // 1. Syncing
+      // 2. Signing & Broadcasting via Midl
+      // 3. Storing proof to backend
+      // 4. Verification polling
+      const result = await processPayment(totalSats, invoiceId);
 
-          const confirmedUtxos = walletData.utxos.filter((u: any) => u.status.confirmed);
-          const unconfirmedUtxos = walletData.utxos.filter((u: any) => !u.status.confirmed);
-
-          console.log('[Checkout] Total UTXOs:', walletData.utxos.length, '(', confirmedUtxos.length, 'confirmed,', unconfirmedUtxos.length, 'unconfirmed)');
-          console.log('[Checkout] Balance:', walletData.balance, 'sats');
-        } catch (syncError: any) {
-          console.error('[Checkout] Wallet sync failed:', syncError);
-          throw new Error(`Wallet sync failed: ${syncError.message}`);
-        }
-      }
-
-      // Execute Real Payment
-      const txid = await executeBitcoinPayment(
-        Math.floor(total * 100000000), // Convert to sats
-        btcAddress,
-        network,
-        wallet.type as 'Xverse' | 'UniSat',
-        wallet.paymentAddress || wallet.address
-      );
-
-      if (txid) {
-        console.log('Transaction successful! TxID:', txid);
-
-        // Complete settlement immediately (frontend-only, no backend)
-        setTimeout(() => {
-          completeSettlement(txid);
-        }, 2000); // Small delay for UX
-      } else {
-        throw new Error('No transaction ID returned from wallet. Please check your transaction history.');
+      if (result.txid) {
+        console.log('Payment processed successfully. TXID:', result.txid, 'EVM Hash:', result.evmTxHash);
+        completeSettlement(result.txid, result.evmTxHash || undefined);
       }
     } catch (error: any) {
-      console.error("Full Payment Error:", error);
+      console.error("Payment Error:", error);
       setStep('invoice');
 
       let friendlyMessage = error.message || 'Payment failed';
-
-      // Handle known error patterns
-      if (error.message === 'USER_CANCELLED' || error.message?.includes('cancelled')) {
-        friendlyMessage = 'Transaction was cancelled by user.';
-      } else if (error.message?.toLowerCase().includes('insufficient')) {
-        friendlyMessage = 'Insufficient funds for payment + network fees.';
-      } else if (error.message?.includes('Invalid address')) {
-        friendlyMessage = 'Invalid store address for this network.';
-      } else if (typeof error === 'object' && error.error?.message) {
-        friendlyMessage = error.error.message;
-      }
+      if (error.message === 'USER_CANCELLED') friendlyMessage = 'Transaction cancelled';
+      else if (error.message?.includes('Insufficient')) friendlyMessage = 'Insufficient funds';
 
       setVerificationError(friendlyMessage);
     }
@@ -208,17 +172,39 @@ const Checkout: React.FC = () => {
           Order <span className="text-white font-mono">#{invoiceId}</span> has been authenticated on-chain. Your boutique assets are now being prepared for discrete dispatch.
         </p>
 
-        <div className="glass-ios p-6 rounded-3xl mb-12 max-w-md mx-auto">
-          <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 block mb-2">Transaction Proof</span>
-          <a
-            href={`${NETWORK_CONFIG[network]?.mempoolApi.replace('/api', '')}/tx/${confirmedTxId}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-primary text-xs break-all font-mono hover:underline flex items-center justify-center space-x-2"
-          >
-            <span>{confirmedTxId}</span>
-            <ExternalLink size={12} />
-          </a>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-12 max-w-2xl mx-auto">
+          <div className="glass-ios p-6 rounded-3xl">
+            <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 block mb-2 text-center">Bitcoin Transaction</span>
+            <a
+              href={`${NETWORK_CONFIG[network]?.mempoolApi.replace('/api', '')}/tx/${confirmedTxId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary text-[10px] break-all font-mono hover:underline flex items-center justify-center space-x-2"
+            >
+              <span>{confirmedTxId?.substring(0, 20)}...</span>
+              <ExternalLink size={10} />
+            </a>
+          </div>
+
+          {evmTxHash ? (
+            <div className="glass-ios p-6 rounded-3xl border border-primary/20 bg-primary/5">
+              <span className="text-[10px] font-black uppercase tracking-widest text-primary block mb-2 text-center">EVM Execution Layer</span>
+              <a
+                href={`https://blockscout.staging.midl.xyz/tx/${evmTxHash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-white text-[10px] break-all font-mono hover:underline flex items-center justify-center space-x-2"
+              >
+                <span>{evmTxHash?.substring(0, 20)}...</span>
+                <ExternalLink size={10} />
+              </a>
+            </div>
+          ) : (
+            <div className="glass-ios p-6 rounded-3xl opacity-50">
+              <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 block mb-2 text-center">EVM Execution</span>
+              <span className="text-[10px] text-gray-400 block text-center italic">Not Triggered</span>
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
@@ -305,39 +291,37 @@ const Checkout: React.FC = () => {
                   </div>
                 </div>
 
-                {step !== 'auth' && (
-                  <div className="space-y-4 px-8">
-                    <div className="flex items-start space-x-6">
-                      <Shield className="text-primary shrink-0 mt-1" size={28} />
-                      <p className="text-xs text-gray-500 font-medium leading-relaxed uppercase tracking-widest">
-                        Secure Peer-to-Peer settlement. Authenticate via your {wallet?.type} wallet or external node.
-                      </p>
-                    </div>
-
-                    {/* Low Balance Warning */}
-                    {wallet?.balance !== undefined && wallet.balance < (total * 100000000) && (
-                      <div className="glass-ios p-6 rounded-3xl border border-red-500/20 bg-red-500/5 flex items-center justify-between">
-                        <div className="flex items-center space-x-4 text-red-400">
-                          <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center shrink-0">
-                            <span className="font-black text-lg">!</span>
-                          </div>
-                          <div>
-                            <h4 className="font-black uppercase tracking-widest text-xs mb-1">Insufficient Funds</h4>
-                            <p className="text-xs opacity-70">Balance: {wallet.balance.toLocaleString()} sats | Required: {Math.ceil(total * 100000000).toLocaleString()} sats</p>
-                          </div>
-                        </div>
-                        <a
-                          href={NETWORK_CONFIG[network]?.faucetUrl || "https://faucet.midl.xyz/"}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-4 py-2 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors"
-                        >
-                          Get Tokens
-                        </a>
-                      </div>
-                    )}
+                <div className="space-y-4 px-8">
+                  <div className="flex items-start space-x-6">
+                    <Shield className="text-primary shrink-0 mt-1" size={28} />
+                    <p className="text-xs text-gray-500 font-medium leading-relaxed uppercase tracking-widest">
+                      Secure Peer-to-Peer settlement. Authenticate via your {wallet?.type} wallet or external node.
+                    </p>
                   </div>
-                )}
+
+                  {/* Low Balance Warning */}
+                  {wallet?.balance !== undefined && wallet.balance < (total * 100000000) && (
+                    <div className="glass-ios p-6 rounded-3xl border border-red-500/20 bg-red-500/5 flex items-center justify-between">
+                      <div className="flex items-center space-x-4 text-red-400">
+                        <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center shrink-0">
+                          <span className="font-black text-lg">!</span>
+                        </div>
+                        <div>
+                          <h4 className="font-black uppercase tracking-widest text-xs mb-1">Insufficient Funds</h4>
+                          <p className="text-xs opacity-70">Balance: {wallet.balance.toLocaleString()} sats | Required: {Math.ceil(total * 100000000).toLocaleString()} sats</p>
+                        </div>
+                      </div>
+                      <a
+                        href={(NETWORK_CONFIG[network] as any)?.faucetUrl || "https://faucet.midl.xyz/"}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-4 py-2 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors"
+                      >
+                        Get Tokens
+                      </a>
+                    </div>
+                  )}
+                </div>
               </div>
             </>
           )}

@@ -226,26 +226,7 @@ export class MidlClient {
     }
 
     private async suggestMidlNetwork() {
-        const { request } = await import('sats-connect');
-        try {
-            // Spoof as 'Testnet' but provide our Regtest/Proxy URLs
-            // This forces Xverse to respect the indexerUrl
-            await request('wallet_addNetwork', {
-                chain: 'bitcoin',
-                name: 'MIDL Regtest',
-                type: 'Regtest' as any,
-                rpcUrl: 'https://mempool.staging.midl.xyz/api',
-                rpcFallbackUrl: 'https://mempool.staging.midl.xyz/api',
-                blockExplorerUrl: 'https://mempool.staging.midl.xyz',
-                // Use local proxy for indexer to handle Ordinal checks (mocks 200 OK for /v2/ordinal-utxo)
-                indexerUrl: 'http://localhost:3001',
-                switch: true
-            });
-            console.log('[Midl] Successfully suggested MIDL Regtest network (Spoofed as Testnet)');
-        } catch (error) {
-            console.warn("Midl network suggestion ignored/failed:", error);
-            // Don't throw, just warn, as it might already be added
-        }
+        return suggestMidlNetwork();
     }
 
     private async connectUniSat(network: MidlConfig['network']): Promise<MidlWalletData> {
@@ -280,7 +261,7 @@ export class MidlClient {
 
         const btcNetwork = this.mapToSatsConnectNetwork(network);
         // STEP 0
-        alert(`Debug 0/5: Starting Payment\nAmount: ${amount}\nRecipient: ${recipient}`);
+        alert(`Debug 0/5: Starting Payment\nAmount: ${amount}\nRecipient: ${recipient} `);
 
         try {
             // Step 1: Construct PSBT
@@ -294,7 +275,7 @@ export class MidlClient {
                 // STEP 2
                 alert('Debug 2/5: PSBT Constructed Successfully!');
             } catch (psbtError: any) {
-                alert(`Debug ERROR at PSBT: ${psbtError.message}`);
+                alert(`Debug ERROR at PSBT: ${psbtError.message} `);
                 throw psbtError;
             }
 
@@ -307,7 +288,7 @@ export class MidlClient {
             const signingIndexes = tempPsbt.txInputs.map((_, i) => i);
 
             // STEP 3
-            console.log(`[Midl] Requesting Xverse Signature. Signing Indexes: ${signingIndexes.join(',')}`);
+            console.log(`[Midl] Requesting Xverse Signature.Signing Indexes: ${signingIndexes.join(',')} `);
 
             let signedPsbt: string;
             try {
@@ -329,7 +310,7 @@ export class MidlClient {
                             network: {
                                 type: btcNetwork
                             },
-                            message: `Sign payment of ${amount} sats to ${recipient}`,
+                            message: `Sign payment of ${amount} sats to ${recipient} `,
                             psbtBase64,
                             broadcast: false, // DON'T let Xverse broadcast
                             inputsToSign: [{
@@ -361,7 +342,7 @@ export class MidlClient {
             } catch (signError: any) {
                 if (signError.message === 'USER_CANCELLED') throw signError;
                 console.error('[Midl] Signing Failed:', signError);
-                throw new Error(`Wallet signing failed: ${signError.message}`);
+                throw new Error(`Wallet signing failed: ${signError.message} `);
             }
 
             // Step 3: Extract and Broadcast
@@ -380,10 +361,10 @@ export class MidlClient {
 
             try {
                 const txid = await midlService.broadcastTransaction(signedTxHex, network);
-                console.log(`[Midl] Broadcast Success! TxID: ${txid}`);
+                console.log(`[Midl] Broadcast Success! TxID: ${txid} `);
                 return txid;
             } catch (broadcastError: any) {
-                console.error(`[Midl] Broadcast Error: ${broadcastError.message}`);
+                console.error(`[Midl] Broadcast Error: ${broadcastError.message} `);
                 throw broadcastError;
             }
 
@@ -398,6 +379,29 @@ export class MidlClient {
         if (typeof (window as any).unisat === 'undefined') throw new Error('UniSat not installed');
         // Double check network?
         return await (window as any).unisat.sendBitcoin(recipient, amount);
+    }
+}
+
+export async function suggestMidlNetwork() {
+    const { request } = await import('sats-connect');
+    try {
+        // Spoof as 'Testnet' but provide our Regtest/Proxy URLs
+        // This forces Xverse to respect the indexerUrl
+        await request('wallet_addNetwork', {
+            chain: 'bitcoin',
+            name: 'MIDL Regtest',
+            type: 'Testnet', // Changed to Testnet to ensure spoofing works
+            rpcUrl: 'http://localhost:3001',
+            rpcFallbackUrl: 'http://localhost:3001',
+            blockExplorerUrl: 'https://mempool.staging.midl.xyz',
+            // Use official Xverse API as indexer
+            indexerUrl: 'https://api-3.xverse.app',
+            switch: true
+        });
+        console.log('[Midl] Successfully suggested MIDL Regtest network (Spoofed as Testnet)');
+    } catch (error) {
+        console.warn("Midl network suggestion ignored/failed:", error);
+        // Don't throw, just warn, as it might already be added
     }
 }
 

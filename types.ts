@@ -12,6 +12,8 @@ export interface WalletInfo {
   type: WalletType;
   publicKey?: string;
   balance?: number; // In satoshis
+  signature?: string; // Auth signature
+  network: Network; // Current network context
 }
 
 export interface Product {
@@ -41,6 +43,8 @@ export interface Order {
   total_btc: number;
   status: OrderStatus;
   transaction_hash?: string;
+  evm_tx_hash?: string;
+  evm_status?: 'pending' | 'confirmed' | 'failed';
   created_at: string;
 }
 

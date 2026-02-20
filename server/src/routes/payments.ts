@@ -42,7 +42,7 @@ const router = express.Router();
 // Store Payment Intent (On-Chain Proof Layer)
 router.post('/store', async (req: Request, res: Response) => {
     console.log('[API] /store called with:', req.body);
-    const { txid, orderId, amount, walletAddress, network } = req.body;
+    const { txid, orderId, amount, walletAddress, network, evmTxHash } = req.body;
 
     if (!txid || !orderId || !amount || !walletAddress) {
         res.status(400).json({ error: 'Missing required fields' });
@@ -51,8 +51,8 @@ router.post('/store', async (req: Request, res: Response) => {
 
     try {
         // Use REPLACE to avoid duplicates on retry
-        const stmt = db.prepare('INSERT OR REPLACE INTO payments (order_id, txid, amount, wallet_address, status, confirmations) VALUES (?, ?, ?, ?, ?, ?)');
-        stmt.run(orderId, txid, amount, walletAddress, 'pending', 0, function (this: any, err: Error | null) {
+        const stmt = db.prepare('INSERT OR REPLACE INTO payments (order_id, txid, amount, wallet_address, status, confirmations, evm_tx_hash, evm_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+        stmt.run(orderId, txid, amount, walletAddress, 'pending', 0, evmTxHash || null, 'pending', function (this: any, err: Error | null) {
             if (err) {
                 console.error('[DB] Insert Error:', err.message);
                 res.status(500).json({ error: err.message });
@@ -117,6 +117,40 @@ router.get('/verify/:txid', async (req: Request, res: Response) => {
     } catch (error: any) {
         console.error('[Server] Verify Error:', error.message);
         res.status(500).json({ error: 'Failed to verify transaction' });
+    }
+});
+
+// Verify EVM Transaction Status
+router.get('/evm/verify/:hash', async (req: Request, res: Response) => {
+    const { hash } = req.params;
+    console.log(`[API] Verifying EVM TX: ${hash}`);
+
+    try {
+        const { ethers } = await import('ethers');
+        const EVM_RPC_URL = process.env.VITE_MIDL_EVM_RPC || process.env.NEXT_PUBLIC_MIDL_EVM_RPC || 'https://rpc.staging.midl.xyz';
+        const provider = new ethers.JsonRpcProvider(EVM_RPC_URL);
+
+        const receipt = await provider.getTransactionReceipt(hash);
+
+        if (!receipt) {
+            res.json({ status: 'pending', confirmations: 0 });
+            return;
+        }
+
+        const currentBlock = await provider.getBlockNumber();
+        const confirmations = currentBlock - receipt.blockNumber + 1;
+
+        if (receipt.status === 1) {
+            // Update DB if we find the matching hash
+            db.run('UPDATE payments SET evm_status = ? WHERE evm_tx_hash = ?', ['confirmed', hash]);
+            res.json({ status: 'confirmed', confirmations });
+        } else {
+            res.json({ status: 'failed', confirmations });
+        }
+    } catch (error: any) {
+        console.error('[Server] Verify EVM Error:', error.message);
+        // Fallback or error
+        res.status(500).json({ error: 'Failed to verify EVM transaction' });
     }
 });
 

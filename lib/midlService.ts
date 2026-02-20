@@ -252,25 +252,10 @@ export async function broadcastTransaction(signedTxHex: string, network: string 
  * Get current balance for an address (in satoshis)
  */
 export async function getBalance(address: string, network: string = 'regtest'): Promise<number> {
-    const apiBase = NETWORK_CONFIG[network as keyof typeof NETWORK_CONFIG].mempoolApi;
-    console.log('[MIDL Service] Fetching balance for:', address);
-
+    console.log('[MIDL Service] Fetching balance via SDK for:', address);
     try {
-        const response = await fetch(`${apiBase}/address/${address}`);
-
-        if (!response.ok) {
-            throw new Error(`Failed to fetch balance: ${response.statusText}`);
-        }
-
-        const data = await response.json();
-
-        // Calculate confirmed + unconfirmed balance
-        const confirmed = (data.chain_stats?.funded_txo_sum || 0) - (data.chain_stats?.spent_txo_sum || 0);
-        const unconfirmed = (data.mempool_stats?.funded_txo_sum || 0) - (data.mempool_stats?.spent_txo_sum || 0);
-        const totalBalance = confirmed + unconfirmed;
-
-        console.log('[MIDL Service] Balance:', totalBalance, 'sats (confirmed:', confirmed, 'unconfirmed:', unconfirmed, ')');
-        return totalBalance;
+        const { midl } = await import('../services/midlClient');
+        return await midl.getBalance(address);
     } catch (error) {
         console.error('[MIDL Service] Balance fetch failed:', error);
         return 0;
@@ -281,7 +266,14 @@ export async function getBalance(address: string, network: string = 'regtest'): 
  * Get UTXOs for an address (alias for fetchUtxos)
  */
 export async function getUtxos(address: string): Promise<UTXO[]> {
-    return fetchUtxos(address);
+    console.log('[MIDL Service] Fetching UTXOs via SDK for:', address);
+    try {
+        const { midl } = await import('../services/midlClient');
+        return await midl.getUtxos(address) as any;
+    } catch (error) {
+        console.error('[MIDL Service] UTXO fetch failed:', error);
+        return [];
+    }
 }
 
 /**

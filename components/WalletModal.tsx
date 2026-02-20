@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../context/StoreContext';
-import { connectWallet } from '../services/walletService';
 import { X, CheckCircle2, AlertCircle, ExternalLink, Shield, Zap, ArrowRight } from 'lucide-react';
 import { ConnectionStatus } from '../types';
 
 const WalletModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
-  const { connectWallet: setStoreWallet, network, resetApp } = useStore();
+
+  const { connect, connectWallet: setStoreWallet, network, resetApp, wallet } = useStore();
   const [status, setStatus] = useState<ConnectionStatus>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [connectedAddress, setConnectedAddress] = useState<string | null>(null);
@@ -27,14 +27,16 @@ const WalletModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpe
     setErrorMessage(null);
     try {
       // Use unified Midl connectWallet function
-      const walletInfo = await connectWallet(type, network);
-      setConnectedAddress(walletInfo.address);
-      setStatus('connected');
+      const address = await connect(type);
+      if (address) {
+        setConnectedAddress(address);
+        setStatus('connected');
 
-      setTimeout(() => {
-        setStoreWallet(walletInfo);
-        onClose();
-      }, 1500);
+        setTimeout(() => {
+          // Store syncs automatically via useEffect now, but we can verify
+          onClose();
+        }, 1500);
+      }
     } catch (e: any) {
       setStatus('error');
       let msg = 'Connection failed. Please try again.';
@@ -97,7 +99,7 @@ const WalletModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpe
                   {/* Balance Display */}
                   {network !== 'mainnet' && (
                     <p className="text-primary font-bold text-sm">
-                      Balance: {(useStore().wallet?.balance || 0).toLocaleString()} sats
+                      Balance: {(wallet?.balance || 0).toLocaleString()} sats
                     </p>
                   )}
                 </div>
@@ -166,31 +168,7 @@ const WalletModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpe
                     </a>
                   </div>
 
-                  {/* Dev / Test Helper */}
-                  <div className="pt-2 w-full">
-                    <button
-                      onClick={async () => {
-                        try {
-                          // Switch app network first
-                          useStore().setNetwork('regtest');
-                          // Call MIDL setup
-                          const { midlClient } = await import('../lib/midlClient');
-                          await midlClient.setupRegtest();
-                          alert("Network suggested! Please approve in Xverse.");
-                        } catch (e) {
-                          console.error(e);
-                          alert("Setup failed. See console.");
-                        }
-                      }}
-                      className="w-full py-3 rounded-xl bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20 font-bold text-xs uppercase tracking-widest transition-colors flex items-center justify-center space-x-2"
-                    >
-                      <Zap size={14} />
-                      <span>⚡ Setup Test Network</span>
-                    </button>
-                    <p className="text-[10px] text-gray-600 text-center mt-2">
-                      Adds MIDL Regtest RPC to Xverse
-                    </p>
-                  </div>
+
                 </div>
 
                 <div className="pt-8 flex flex-col items-center space-y-4">

@@ -16,7 +16,9 @@ const db: Database = new sqlite3.Database(dbPath, (err) => {
       wallet_address TEXT NOT NULL,
       status TEXT DEFAULT 'pending',
       confirmations INTEGER DEFAULT 0,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      evm_tx_hash TEXT,
+      evm_status TEXT DEFAULT 'pending'
     )`, (err) => {
             if (err) {
                 console.error('Error creating table', err.message);

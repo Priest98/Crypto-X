@@ -7,7 +7,7 @@ import { useStore } from '../context/StoreContext';
 import { useNavigate } from 'react-router-dom';
 
 const Wallet: React.FC = () => {
-    const { wallet } = useStore();
+    const { wallet, authenticateWallet } = useStore();
     const navigate = useNavigate();
 
     if (!wallet) {
@@ -39,9 +39,29 @@ const Wallet: React.FC = () => {
                     <p className="text-gray-400">Manage your Bitcoin wallet on MIDL</p>
                 </div>
 
-                {/* Network Status */}
-                <div className="mb-6">
-                    <NetworkStatus />
+                {/* Network Status & Actions */}
+                <div className="mb-6 flex justify-between items-center">
+                    <div className="flex items-center space-x-4">
+                        <NetworkStatus />
+                        <button
+                            onClick={() => (window as any).refreshWallet && (window as any).refreshWallet()}
+                            className="px-4 py-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-lg font-bold text-xs transition-all border border-blue-500/20 flex items-center space-x-2"
+                        >
+                            <span>Refresh Balance</span>
+                        </button>
+                    </div>
+                    {!wallet.signature ? (
+                        <button
+                            onClick={authenticateWallet}
+                            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors shadow-lg shadow-purple-900/20"
+                        >
+                            Sign to Authenticate
+                        </button>
+                    ) : (
+                        <div className="px-4 py-2 bg-green-500/20 border border-green-500/50 text-green-400 rounded-lg font-medium flex items-center">
+                            <span className="mr-2">✓</span> Authenticated
+                        </div>
+                    )}
                 </div>
 
                 {/* Balance and Actions */}

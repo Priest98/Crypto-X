@@ -14,14 +14,13 @@ interface PaymentModalProps {
 }
 
 const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, orderId, totalAmount, btcPrice }) => {
-    const { wallet, connect, pay, txId, isProcessing, verificationStatus, confirmations, error } = usePayment();
+    const { wallet, connect, pay, txId, evmTxId, evmStatus, isProcessing, verificationStatus, confirmations, error } = usePayment();
     const { network, setNetwork } = useStore();
     const [method, setMethod] = useState<'Xverse' | 'UniSat' | null>(null);
 
     // Convert USD to Satoshis (1 BTC = 100,000,000 Sats)
     const amountBtc = totalAmount / btcPrice;
-    const amountSats = Math.floor(amountBtc * 100000000);
-    const storeAddress = 'tb1q9pvj9pvj9pvj9pvj9pvj9pvj9pvj9pvj9pvj9p'; // Placeholder Testnet Address
+    const storeAddress = 'bcrt1q6rhng852dd3602521100566336c11100566336'; // Regtest Address
 
     if (!isOpen) return null;
 
@@ -166,9 +165,32 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, orderId, t
                             rel="noreferrer"
                             className="inline-flex items-center space-x-2 text-xs text-primary hover:underline"
                         >
-                            <span>View Transaction</span>
+                            <span>View Bitcoin Transaction</span>
                             <ArrowUpRight size={12} />
                         </a>
+
+                        {/* EVM Status Section */}
+                        {evmTxId && (
+                            <div className="pt-4 border-t border-white/10 mt-4">
+                                <div className="flex items-center justify-center space-x-2 mb-2">
+                                    {evmStatus === 'confirmed' ? (
+                                        <CheckCircle size={16} className="text-green-500" />
+                                    ) : (
+                                        <div className="w-4 h-4 border-2 border-yellow-500/30 border-t-yellow-500 rounded-full animate-spin"></div>
+                                    )}
+                                    <span className="text-sm font-bold">EVM Execution Layer</span>
+                                </div>
+                                <a
+                                    href={`https://blockscout.staging.midl.xyz/tx/${evmTxId}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex items-center space-x-2 text-xs text-blue-400 hover:underline"
+                                >
+                                    <span>{evmTxId.slice(0, 6)}...{evmTxId.slice(-4)}</span>
+                                    <ArrowUpRight size={10} />
+                                </a>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

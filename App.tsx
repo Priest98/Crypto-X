@@ -3,6 +3,7 @@ import React from 'react';
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { MidlProvider } from '@midl/react';
+import { SatoshiKitProvider } from '@midl/satoshi-kit';
 import { midlConfig, queryClient } from './lib/midlConfig';
 import { StoreProvider } from './context/StoreContext';
 import ScrollToTop from './components/ScrollToTop';
@@ -22,25 +23,27 @@ const App: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <MidlProvider config={midlConfig}>
-        <Router>
-          <ScrollToTop />
-          <StoreProvider>
-            <Layout>
-              <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/products" element={<Products />} />
-                <Route path="/products/:id" element={<ProductDetail />} />
-                <Route path="/cart" element={<Cart />} />
-                <Route path="/checkout" element={<Checkout />} />
-                <Route path="/orders" element={<Orders />} />
-                <Route path="/admin" element={<Admin />} />
-                <Route path="/whitepaper" element={<Whitepaper />} />
-                <Route path="/wallet" element={<Wallet />} />
-                <Route path="/receive" element={<Receive />} />
-              </Routes>
-            </Layout>
-          </StoreProvider>
-        </Router>
+        <SatoshiKitProvider>
+          <Router>
+            <ScrollToTop />
+            <StoreProvider>
+              <Layout>
+                <Routes>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/products" element={<Products />} />
+                  <Route path="/products/:id" element={<ProductDetail />} />
+                  <Route path="/cart" element={<Cart />} />
+                  <Route path="/checkout" element={<Checkout />} />
+                  <Route path="/orders" element={<Orders />} />
+                  <Route path="/admin" element={<Admin />} />
+                  <Route path="/whitepaper" element={<Whitepaper />} />
+                  <Route path="/wallet" element={<Wallet />} />
+                  <Route path="/receive" element={<Receive />} />
+                </Routes>
+              </Layout>
+            </StoreProvider>
+          </Router>
+        </SatoshiKitProvider>
       </MidlProvider>
     </QueryClientProvider>
   );
