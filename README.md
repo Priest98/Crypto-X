@@ -2,19 +2,41 @@
 <img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
 </div>
 
-# Run and deploy your AI Studio app
+# ₿ Crypto-X: Double-Chain Boutique Marketplace
 
-This contains everything you need to run your app locally.
+A premium digital asset marketplace integrating **Bitcoin Settlement** with an **EVM Execution Layer**.
 
-View your app in AI Studio: https://ai.studio/apps/drive/1F04XTfSuF8UROCat0edWxtN5r0sR8lOH
+## 🚀 Key Features
+- **Bitcoin Native**: Secure payments via Xverse/UniSat wallets on Regtest.
+- **EVM Execution Layer**: Automated secondary transactions linking Bitcoin finality to EVM actions.
+- **Real-Time Monitoring**: Dual-chain transaction tracking on the success screen.
+- **Developer First**: Integrated with MIDL Infrastructure for seamless local development.
 
-## Run Locally
+## 📖 Documentation
+Detailed technical architecture, data flows, and configuration guides can be found in:
+👉 **[TECHNICAL_DOCS.md](./TECHNICAL_DOCS.md)**
 
-**Prerequisites:**  Node.js
+## 🛠️ Run Locally
 
+**Prerequisites:** Node.js (v18+)
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+1. **Install Dependencies:**
+   ```bash
+   npm install
+   cd server && npm install
+   ```
+
+2. **Configuration:**
+   Set your `VITE_MIDL_EVM_RPC` and `VITE_EVM_PRIVATE_KEY` in `.env`.
+
+3. **Start Development:**
+   ```bash
+   # Terminal 1: Frontend
+   npm run dev
+   
+   # Terminal 2: Backend
+   npm run server
+   ```
+
+---
+*Built with MIDL SDK & Antigravity AI*
