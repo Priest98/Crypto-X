@@ -167,7 +167,7 @@ export class MidlClient {
                         name: 'Velencia',
                         icon: window.location.origin + '/vite.svg',
                     }
-                });
+                } as any);
             });
         };
 
@@ -387,15 +387,17 @@ export async function suggestMidlNetwork() {
     try {
         // Spoof as 'Testnet' but provide our Regtest/Proxy URLs
         // This forces Xverse to respect the indexerUrl
-        await request('wallet_addNetwork', {
+        const { BitcoinNetworkType } = await import('sats-connect');
+
+        await (request as any)('wallet_addNetwork', {
             chain: 'bitcoin',
             name: 'MIDL Regtest',
-            type: 'Testnet', // Changed to Testnet to ensure spoofing works
-            rpcUrl: 'http://localhost:3001',
-            rpcFallbackUrl: 'http://localhost:3001',
+            type: BitcoinNetworkType.Testnet,
+            rpcUrl: 'https://mempool.staging.midl.xyz/api',
+            rpcFallbackUrl: 'https://mempool.staging.midl.xyz/api',
             blockExplorerUrl: 'https://mempool.staging.midl.xyz',
-            // Use official Xverse API as indexer
-            indexerUrl: 'https://api-3.xverse.app',
+            // Use MIDL API directly as indexer instead of local proxy or Xverse default
+            indexerUrl: 'https://mempool.staging.midl.xyz/api',
             switch: true
         });
         console.log('[Midl] Successfully suggested MIDL Regtest network (Spoofed as Testnet)');
