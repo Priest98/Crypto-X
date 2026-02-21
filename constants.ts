@@ -24,7 +24,7 @@ export const NETWORK_CONFIG = {
     faucetUrl: 'https://faucet.midl.xyz/'
   },
   regtest: {
-    // Midl Regtest Environment
+    // Midl Regtest Environment - Permanent Hardcoded URL
     mempoolApi: 'https://mempool.staging.midl.xyz/api',
     // Using a valid Regtest address (P2WPKH)
     storeAddress: 'bcrt1qzyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3lgth6c',

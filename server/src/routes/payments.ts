@@ -2,7 +2,7 @@ import express, { Request, Response } from 'express';
 import db from '../database';
 
 // Simple Backend RPC Client for Midl/Bitcoin Node
-const MIDL_RPC_URL = process.env.MIDL_RPC_URL || 'https://rpc.staging.midl.xyz'; // Regtest RPC
+const MIDL_RPC_URL = process.env.MIDL_RPC_URL || 'https://mempool.staging.midl.xyz/api'; // Permanent Hardcoded URL
 
 const getTransactionStatus = async (txid: string) => {
     try {

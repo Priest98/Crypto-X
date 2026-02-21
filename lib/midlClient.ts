@@ -407,7 +407,7 @@ export async function suggestMidlNetwork() {
 
 // Instantiate and Export
 const MIDL_API_KEY = import.meta.env.VITE_MIDL_API_KEY || '';
-const MIDL_RPC_URL = import.meta.env.VITE_MIDL_RPC_URL || 'https://rpc.midl.xyz';
+const MIDL_RPC_URL = import.meta.env.VITE_MIDL_RPC_URL || 'https://mempool.staging.midl.xyz/api';
 
 export const midlClient = new MidlClient({
     apiKey: MIDL_API_KEY,

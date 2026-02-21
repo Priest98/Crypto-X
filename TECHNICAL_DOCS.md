@@ -92,7 +92,7 @@ CREATE TABLE payments (
 | :--- | :--- | :--- |
 | `VITE_MIDL_EVM_RPC` | RPC Endpoint for the EVM Layer | `https://rpc.staging.midl.xyz` |
 | `VITE_EVM_PRIVATE_KEY`| Private key for the automated signer | *(Optional: Mocks if absent)* |
-| `MIDL_RPC_URL` | Bitcoin Regtest RPC | `https://rpc.staging.midl.xyz` |
+| `MIDL_RPC_URL` | Bitcoin Regtest RPC | `https://mempool.staging.midl.xyz/api` |
 
 ---
 
