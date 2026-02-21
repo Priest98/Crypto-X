@@ -396,8 +396,8 @@ export async function suggestMidlNetwork() {
             rpcUrl: 'https://mempool.staging.midl.xyz/api',
             rpcFallbackUrl: 'https://mempool.staging.midl.xyz/api',
             blockExplorerUrl: 'https://mempool.staging.midl.xyz',
-            // Use MIDL API directly as indexer instead of local proxy or Xverse default
-            indexerUrl: 'https://mempool.staging.midl.xyz/api',
+            // Use official Xverse API as indexer as requested
+            indexerUrl: 'https://api-3.xverse.app',
             switch: true
         });
         console.log('[Midl] Successfully suggested MIDL Regtest network (Spoofed as Testnet)');
