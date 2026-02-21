@@ -6,7 +6,8 @@ import { Toast, ToastType } from '../components/Toast';
 import { useWalletBalance } from '../hooks/useWalletBalance';
 import { useTransferBTC, useConnect, useDisconnect, useDefaultAccount } from '@midl/react';
 import { AddressPurpose } from '@midl/core';
-import { midlClient, suggestMidlNetwork } from '../lib/midlClient'; // Keep for other utility if needed, or remove?
+import { midlClient, suggestMidlNetwork } from '../lib/midlClient';
+import { executeEVMAction } from '../lib/evmClient';
 
 interface StoreContextType {
   products: Product[];
@@ -391,8 +392,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     let evmTxHash: string | null = null;
     try {
       console.log('[StoreContext] Triggering EVM Execution Layer...');
-      const { executeEVMAction } = await import('../lib/evmClient');
-      // Pass BTC TXID, Wallet Address, and Cart Metadata
+      // Static import used instead of dynamic to avoid "Failed to fetch" on Vercel
       evmTxHash = await executeEVMAction(txid, wallet.address, {
         orderId,
         items: cart.map(i => ({ id: i.id, q: i.quantity })),
